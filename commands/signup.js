@@ -15,13 +15,13 @@ module.exports = {
             return;
         }
 
-        if (tournament.participants.length >= tournament.maxTeams * tournament.game.teamSize) {
+        if (tournament.participants && tournament.participants.length >= tournament.maxTeams * tournament.game.teamSize) {
             await interaction.reply({ content: 'The tournament is full.', ephemeral: true });
             return;
         }
 
         const modal = new ModalBuilder()
-            .setCustomId('tournament_signup_modal')
+            .setCustomId('signup_modal')
             .setTitle('Tournament Sign Up');
 
         const teamNameInput = new TextInputBuilder()
@@ -54,7 +54,8 @@ module.exports = {
     },
 
     async handleInteraction(interaction) {
-        if (interaction.isModalSubmit() && interaction.customId === 'tournament_signup_modal') {
+        console.log(`Handling interaction: ${interaction.customId}`);
+        if (interaction.isModalSubmit() && interaction.customId === 'signup_modal') {
             const tournament = tournaments.get(interaction.guildId);
             if (!tournament) {
                 await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
@@ -72,6 +73,9 @@ module.exports = {
                 geoGuessrProfile = interaction.fields.getTextInputValue('geoguessr_profile');
             }
 
+            if (!tournament.participants) {
+                tournament.participants = [];
+            }
             tournament.participants.push({ teamName, players, geoGuessrProfile });
 
             const embed = new EmbedBuilder()
@@ -103,6 +107,9 @@ module.exports = {
                     await lastMessage.edit({ embeds: [updatedEmbed] });
                 }
             }
+        } else {
+            console.log('Unhandled interaction:', interaction.customId);
+            await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
         }
     }
 };
