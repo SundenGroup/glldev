@@ -21,29 +21,36 @@ client.once('ready', () => {
 });
 
 client.on('interactionCreate', async interaction => {
-  if (!interaction.isCommand() && !interaction.isButton() && !interaction.isModalSubmit()) return;
+  console.log(`Received interaction: ${interaction.type} - ${interaction.customId || interaction.commandName}`);
 
-  if (interaction.isCommand()) {
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return;
-
-    try {
-      await command.execute(interaction);
-    } catch (error) {
-      console.error(error);
-      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
-    }
-  } else if (interaction.isButton() || interaction.isModalSubmit()) {
-    // Handle button interactions and modal submits in their respective command files
-    const customId = interaction.customId.split('_')[0];
-    const command = client.commands.get(customId);
-    if (command && typeof command.handleInteraction === 'function') {
-      try {
-        await command.handleInteraction(interaction);
-      } catch (error) {
-        console.error(error);
-        await interaction.reply({ content: 'There was an error processing your interaction!', ephemeral: true });
+  try {
+    if (interaction.isCommand()) {
+      const command = client.commands.get(interaction.commandName);
+      if (!command) {
+        console.log(`No command matching ${interaction.commandName} was found.`);
+        return;
       }
+
+      await command.execute(interaction);
+    } else if (interaction.isButton() || interaction.isModalSubmit()) {
+      const customId = interaction.customId.split('_')[0];
+      const command = client.commands.get(customId);
+
+      if (command && typeof command.handleInteraction === 'function') {
+        await command.handleInteraction(interaction);
+      } else {
+        console.log(`No handler found for interaction: ${interaction.customId}`);
+        await interaction.reply({ content: 'This interaction is not currently handled.', ephemeral: true });
+      }
+    }
+  } catch (error) {
+    console.error('Error handling interaction:', error);
+    const replyContent = { content: 'There was an error while processing this interaction!', ephemeral: true };
+    
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply(replyContent).catch(console.error);
+    } else {
+      await interaction.reply(replyContent).catch(console.error);
     }
   }
 });
