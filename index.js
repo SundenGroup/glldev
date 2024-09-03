@@ -47,23 +47,15 @@ client.on('interactionCreate', async interaction => {
                     }
                     break;
                 case 'seed':
-                    if (interaction.member.permissions.has('ADMINISTRATOR')) {
-                        const seedCommand = client.commands.get('seed');
-                        if (seedCommand) {
-                            await seedCommand.execute(interaction, tournamentId);
-                        }
-                    } else {
-                        await interaction.reply({ content: 'Only administrators can seed the tournament.', ephemeral: true });
+                    const seedCommand = client.commands.get('seed');
+                    if (seedCommand) {
+                        await seedCommand.execute(interaction, tournamentId);
                     }
                     break;
                 case 'start':
-                    if (interaction.member.permissions.has('ADMINISTRATOR')) {
-                        const startCommand = client.commands.get('start');
-                        if (startCommand) {
-                            await startCommand.execute(interaction, tournamentId);
-                        }
-                    } else {
-                        await interaction.reply({ content: 'Only administrators can start the tournament.', ephemeral: true });
+                    const startCommand = client.commands.get('start');
+                    if (startCommand) {
+                        await startCommand.execute(interaction, tournamentId);
                     }
                     break;
                 default:
@@ -78,6 +70,11 @@ client.on('interactionCreate', async interaction => {
                 const signupCommand = client.commands.get('signup');
                 if (signupCommand && typeof signupCommand.handleSignupSubmit === 'function') {
                     await signupCommand.handleSignupSubmit(interaction);
+                }
+            } else if (interaction.customId.startsWith('seeding_modal_')) {
+                const seedCommand = client.commands.get('seed');
+                if (seedCommand && typeof seedCommand.handleSeedingModalSubmit === 'function') {
+                    await seedCommand.handleSeedingModalSubmit(interaction);
                 }
             } else {
                 const createTournamentCommand = client.commands.get('create_tournament');

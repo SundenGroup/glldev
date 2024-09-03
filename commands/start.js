@@ -4,26 +4,26 @@ const { tournaments } = require('./createTournament.js');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('start')
-        .setDescription('Start a tournament')
-        .addStringOption(option => 
-            option.setName('tournament_id')
-                .setDescription('The ID of the tournament')
-                .setRequired(true)),
+        .setDescription('Start a tournament'),
 
     async execute(interaction, tournamentId = null) {
         if (!interaction.member.permissions.has('ADMINISTRATOR')) {
             return await interaction.reply({ content: 'You need to be an administrator to use this command.', ephemeral: true });
         }
 
-        tournamentId = tournamentId || interaction.options.getString('tournament_id');
+        let tournament;
+        if (tournamentId) {
+            tournament = Array.from(tournaments.values()).find(t => t.id === tournamentId);
+        } else {
+            tournament = tournaments.get(interaction.guildId);
+        }
 
-        const tournament = tournaments.get(tournamentId);
         if (!tournament) {
             return await interaction.reply({ content: 'Tournament not found.', ephemeral: true });
         }
 
-        if (tournament.status !== 'CREATED') {
-            return await interaction.reply({ content: 'This tournament has already started or ended.', ephemeral: true });
+        if (tournament.status === 'STARTED') {
+            return await interaction.reply({ content: 'This tournament has already started.', ephemeral: true });
         }
 
         if (tournament.participants.length < 2) {
