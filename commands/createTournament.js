@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { Tournament } = require('../utils/tournament.js');
 
 const GAME_PRESETS = {
     VALORANT: { name: "VALORANT", teamSize: 5 },
@@ -13,6 +12,17 @@ const GAME_PRESETS = {
 
 // In-memory storage for tournaments (replace with database in production)
 const tournaments = new Map();
+
+class Tournament {
+    constructor(title, description, dateTime, maxTeams, game) {
+        this.title = title;
+        this.description = description;
+        this.dateTime = dateTime;
+        this.maxTeams = maxTeams;
+        this.game = game;
+        this.participants = [];
+    }
+}
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -118,6 +128,9 @@ module.exports = {
             new ActionRowBuilder().addComponents(maxTeamsInput)
         );
 
+        // Store the selected game in the tournaments Map
+        tournaments.set(interaction.guildId, { game: game });
+
         await interaction.showModal(modal);
     },
 
@@ -130,10 +143,13 @@ module.exports = {
         const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
         const dateTime = new Date(`${date}T${time}:00`);
 
-        const gameKey = interaction.message.components[0].components.find(c => c.data.style === ButtonStyle.Primary).data.custom_id.split('_')[3];
-        const game = GAME_PRESETS[gameKey];
+        const tournamentData = tournaments.get(interaction.guildId);
+        if (!tournamentData || !tournamentData.game) {
+            await interaction.reply({ content: 'An error occurred: Game not found. Please try creating the tournament again.', ephemeral: true });
+            return;
+        }
 
-        const tournament = new Tournament(title, description, dateTime, maxTeams, game);
+        const tournament = new Tournament(title, description, dateTime, maxTeams, tournamentData.game);
         tournaments.set(interaction.guildId, tournament);
 
         const embed = new EmbedBuilder()
@@ -144,7 +160,7 @@ module.exports = {
                 { name: 'Description', value: tournament.description },
                 { name: 'Date and Time', value: tournament.dateTime.toISOString() },
                 { name: 'Max Teams', value: tournament.maxTeams.toString() },
-                { name: 'Game', value: game.name }
+                { name: 'Game', value: tournament.game.name }
             );
 
         const modifyButton = new ButtonBuilder()
