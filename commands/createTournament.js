@@ -15,7 +15,9 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('create_tournament')
         .setDescription('Start the process of creating a new tournament'),
+    
     async execute(interaction) {
+        console.log('Executing create_tournament command');
         if (!interaction.member.permissions.has('ADMINISTRATOR')) {
             await interaction.reply({ content: 'You need to be an administrator to create a tournament.', ephemeral: true });
             return;
@@ -39,10 +41,15 @@ module.exports = {
             ephemeral: true
         });
     },
+
     async handleInteraction(interaction) {
+        console.log(`Handling interaction in createTournament: ${interaction.customId}`);
+        
         if (interaction.isButton() && interaction.customId.startsWith('createTournament_game_')) {
             const gameKey = interaction.customId.split('_')[2];
             const game = GAME_PRESETS[gameKey];
+
+            console.log(`Selected game: ${game.name}`);
 
             const modal = new ModalBuilder()
                 .setCustomId('createTournament_details_modal')
@@ -81,6 +88,7 @@ module.exports = {
 
             await interaction.showModal(modal);
         } else if (interaction.isModalSubmit() && interaction.customId === 'createTournament_details_modal') {
+            console.log('Processing tournament details modal submission');
             const title = interaction.fields.getTextInputValue('title');
             const description = interaction.fields.getTextInputValue('description');
             const dateTime = interaction.fields.getTextInputValue('date_time');
@@ -88,6 +96,7 @@ module.exports = {
 
             const tournament = new Tournament(title, description, new Date(dateTime), maxTeams);
             // Store the tournament in your database or data structure
+            console.log('Created tournament:', tournament);
 
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
@@ -100,6 +109,9 @@ module.exports = {
                 );
 
             await interaction.reply({ content: 'Tournament created successfully!', embeds: [embed], ephemeral: true });
+        } else {
+            console.log('Unhandled interaction in createTournament');
+            await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
         }
     }
 };
