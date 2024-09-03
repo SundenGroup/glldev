@@ -10,7 +10,6 @@ const GAME_PRESETS = {
     OTHER: { name: "Other", teamSize: null }
 };
 
-// In-memory storage for tournaments (replace with database in production)
 const tournaments = new Map();
 
 class Tournament {
@@ -29,7 +28,7 @@ module.exports = {
         .setName('create_tournament')
         .setDescription('Start the process of creating a new tournament'),
     
-    tournaments, // Export the tournaments Map
+    tournaments,
 
     async execute(interaction) {
         if (!interaction.member.permissions.has('ADMINISTRATOR')) {
@@ -132,7 +131,6 @@ module.exports = {
             new ActionRowBuilder().addComponents(maxTeamsInput)
         );
 
-        // Store the selected game in the tournaments Map
         tournaments.set(interaction.guildId, { game: game });
 
         await interaction.showModal(modal);
@@ -189,43 +187,38 @@ module.exports = {
     },
 
     async finalizeTournament(interaction) {
-    const tournament = tournaments.get(interaction.guildId);
-    if (!tournament) {
-        await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
-        return;
-    }
+        const tournament = tournaments.get(interaction.guildId);
+        if (!tournament) {
+            await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+            return;
+        }
 
-    const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
-    if (!announcementChannel) {
-        await interaction.reply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', ephemeral: true });
-        return;
-    }
+        const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
+        if (!announcementChannel) {
+            await interaction.reply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', ephemeral: true });
+            return;
+        }
 
-    const signupButton = new ButtonBuilder()
-        .setCustomId('signup_button')
-        .setLabel('Sign Up')
-        .setStyle(ButtonStyle.Success);
+        const signupButton = new ButtonBuilder()
+            .setCustomId('signup_button')
+            .setLabel('Sign Up')
+            .setStyle(ButtonStyle.Success);
 
-    const row = new ActionRowBuilder()
-        .addComponents(signupButton);
+        const row = new ActionRowBuilder()
+            .addComponents(signupButton);
 
-    const announceEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle(tournament.title)
-        .setDescription(tournament.description)
-        .addFields(
-            { name: 'Date and Time', value: tournament.dateTime.toISOString() },
-            { name: 'Game', value: tournament.game.name },
-            { name: 'Max Teams', value: tournament.maxTeams.toString() },
-            { name: 'Signed Up', value: '0/' + tournament.maxTeams }
-        );
+        const announceEmbed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle(tournament.title)
+            .setDescription(tournament.description)
+            .addFields(
+                { name: 'Date and Time', value: tournament.dateTime.toISOString() },
+                { name: 'Game', value: tournament.game.name },
+                { name: 'Max Teams', value: tournament.maxTeams.toString() },
+                { name: 'Signed Up', value: '0/' + tournament.maxTeams }
+            );
 
-    // Check if the announcement has already been made
-    const existingAnnouncements = await announcementChannel.messages.fetch({ limit: 1 });
-    if (existingAnnouncements.size > 0 && existingAnnouncements.first().embeds[0]?.title === tournament.title) {
-        await interaction.reply({ content: 'Tournament has already been announced.', ephemeral: true });
-    } else {
         await announcementChannel.send({ embeds: [announceEmbed], components: [row] });
         await interaction.reply({ content: 'Tournament finalized and announced!', ephemeral: true });
     }
-}
+};
