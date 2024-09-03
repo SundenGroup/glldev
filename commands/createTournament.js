@@ -107,12 +107,12 @@ module.exports = {
                 );
 
             const modifyButton = new ButtonBuilder()
-                .setCustomId('modify_tournament')
+                .setCustomId('create_tournament_modify')
                 .setLabel('Modify Settings')
                 .setStyle(ButtonStyle.Primary);
 
             const finalizeButton = new ButtonBuilder()
-                .setCustomId('finalize_tournament')
+                .setCustomId('create_tournament_finalize')
                 .setLabel('Finalize Tournament')
                 .setStyle(ButtonStyle.Success);
 
@@ -125,6 +125,42 @@ module.exports = {
                 components: [row],
                 ephemeral: false 
             });
+        } else if (interaction.isButton() && interaction.customId === 'create_tournament_modify') {
+            // Implement modify tournament logic here
+            await interaction.reply({ content: 'Modify tournament feature coming soon!', ephemeral: true });
+        } else if (interaction.isButton() && interaction.customId === 'create_tournament_finalize') {
+            const tournament = tournaments.get(interaction.guildId);
+            if (!tournament) {
+                await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+                return;
+            }
+
+            const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
+            if (!announcementChannel) {
+                await interaction.reply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', ephemeral: true });
+                return;
+            }
+
+            const signupButton = new ButtonBuilder()
+                .setCustomId('tournament_signup')
+                .setLabel('Sign Up')
+                .setStyle(ButtonStyle.Success);
+
+            const row = new ActionRowBuilder()
+                .addComponents(signupButton);
+
+            const announceEmbed = new EmbedBuilder()
+                .setColor('#00FF00')
+                .setTitle(tournament.title)
+                .setDescription(tournament.description)
+                .addFields(
+                    { name: 'Date and Time', value: tournament.dateTime.toISOString() },
+                    { name: 'Max Teams', value: tournament.maxTeams.toString() },
+                    { name: 'Signed Up', value: '0/' + tournament.maxTeams }
+                );
+
+            await announcementChannel.send({ embeds: [announceEmbed], components: [row] });
+            await interaction.reply({ content: 'Tournament finalized and announced!', ephemeral: true });
         } else {
             console.log('Unhandled interaction:', interaction.customId);
             await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
