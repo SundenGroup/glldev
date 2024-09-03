@@ -60,11 +60,6 @@ module.exports = {
         console.log(`Handling interaction: ${interaction.customId}`);
         
         try {
-            if (!interaction.isRepliable()) {
-                console.log('Interaction is no longer repliable');
-                return;
-            }
-
             if (interaction.isButton()) {
                 if (interaction.customId.startsWith('create_tournament_game_')) {
                     console.log('Calling handleGameSelection');
@@ -78,18 +73,12 @@ module.exports = {
                 await this.handleTournamentCreation(interaction);
             } else {
                 console.log('Unhandled interaction:', interaction.customId);
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
-                }
+                await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
             }
         } catch (error) {
             console.error('Error in create_tournament handleInteraction:', error);
             if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
-                } catch (replyError) {
-                    console.error('Error while replying to interaction:', replyError);
-                }
+                await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true }).catch(console.error);
             }
         }
     },
@@ -97,14 +86,6 @@ module.exports = {
     async handleGameSelection(interaction) {
         console.log('Entering handleGameSelection');
         try {
-            if (!interaction.isRepliable()) {
-                console.log('Interaction is no longer repliable in handleGameSelection');
-                return;
-            }
-
-            console.log('Deferring update');
-            await interaction.deferUpdate();
-
             const gameKey = interaction.customId.split('_')[3];
             console.log('Selected game:', gameKey);
             const game = GAME_PRESETS[gameKey];
@@ -160,17 +141,7 @@ module.exports = {
         } catch (error) {
             console.error('Error in handleGameSelection:', error);
             if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({ content: 'An error occurred while processing your game selection. Please try again.', ephemeral: true });
-                } catch (replyError) {
-                    console.error('Error while replying to interaction in handleGameSelection:', replyError);
-                }
-            } else {
-                try {
-                    await interaction.editReply({ content: 'An error occurred while processing your game selection. Please try again.', components: [] });
-                } catch (editReplyError) {
-                    console.error('Error while editing reply in handleGameSelection:', editReplyError);
-                }
+                await interaction.reply({ content: 'An error occurred while processing your game selection. Please try again.', ephemeral: true }).catch(console.error);
             }
         }
     },
