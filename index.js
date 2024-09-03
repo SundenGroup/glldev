@@ -71,11 +71,6 @@ client.on('interactionCreate', async interaction => {
                 if (signupCommand && typeof signupCommand.handleSignupSubmit === 'function') {
                     await signupCommand.handleSignupSubmit(interaction);
                 }
-            } else if (interaction.customId.startsWith('seeding_modal_')) {
-                const seedCommand = client.commands.get('seed');
-                if (seedCommand && typeof seedCommand.handleSeedingModalSubmit === 'function') {
-                    await seedCommand.handleSeedingModalSubmit(interaction);
-                }
             } else {
                 const createTournamentCommand = client.commands.get('create_tournament');
                 if (createTournamentCommand && typeof createTournamentCommand.handleInteraction === 'function') {
