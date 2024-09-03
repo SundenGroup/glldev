@@ -29,13 +29,14 @@ client.on('interactionCreate', async interaction => {
       await command.execute(interaction);
     } else if (interaction.isButton() || interaction.isModalSubmit()) {
       let commandName;
-      if (interaction.isButton()) {
-        commandName = interaction.customId.split('_')[0];
-        if (commandName === 'create' && interaction.customId.split('_')[1] === 'tournament') {
-          commandName = 'create_tournament';
-        }
-      } else if (interaction.isModalSubmit()) {
-        commandName = interaction.customId.split('_')[0];
+      const customIdParts = interaction.customId.split('_');
+      
+      if (customIdParts[0] === 'create' && customIdParts[1] === 'tournament') {
+        commandName = 'create_tournament';
+      } else if (customIdParts[0] === 'signup') {
+        commandName = 'signup';
+      } else {
+        commandName = customIdParts[0];
       }
       
       console.log(`Attempting to handle interaction for command: ${commandName}`);
