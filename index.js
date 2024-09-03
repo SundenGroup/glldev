@@ -1,62 +1,86 @@
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const { token } = require('./config.js');
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildMembers],
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+    ] 
 });
 
 client.commands = new Collection();
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  client.commands.set(command.data.name, command);
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+    if ('data' in command && 'execute' in command) {
+        client.commands.set(command.data.name, command);
+    } else {
+        console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+    }
 }
 
 client.once('ready', () => {
-  console.log(`${client.user.tag} is online! GLL by Clutch`);
-  client.user.setActivity('GLL by Clutch | /help');
+    console.log('Bot is ready!');
 });
 
 client.on('interactionCreate', async interaction => {
-  try {
-    if (interaction.isCommand()) {
-      const command = client.commands.get(interaction.commandName);
-      if (!command) return;
+    if (interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
+        if (!command) return;
 
-      await command.execute(interaction);
-    } else if (interaction.isButton() || interaction.isModalSubmit()) {
-      let commandName;
-      const customIdParts = interaction.customId.split('_');
-      
-      if (customIdParts[0] === 'create' && customIdParts[1] === 'tournament') {
-        commandName = 'create_tournament';
-      } else if (customIdParts[0] === 'signup') {
-        commandName = 'signup';
-      } else {
-        commandName = customIdParts[0];
-      }
-      
-      console.log(`Attempting to handle interaction for command: ${commandName}`);
-      const command = client.commands.get(commandName);
-
-      if (command && typeof command.handleInteraction === 'function') {
-        await command.handleInteraction(interaction);
-      } else {
-        console.log(`No handler found for interaction: ${interaction.customId}`);
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({ content: 'This interaction is not currently handled.', ephemeral: true });
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            console.error(error);
+            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
         }
-      }
+    } else if (interaction.isButton()) {
+        const [action, tournamentId] = interaction.customId.split('_');
+        
+        switch(action) {
+            case 'signup':
+                // Handle signup - call your existing signup logic here
+                break;
+            case 'seed':
+                if (interaction.member.permissions.has('ADMINISTRATOR')) {
+                    await handleSeedingButton(interaction, tournamentId);
+                } else {
+                    await interaction.reply({ content: 'Only administrators can seed the tournament.', ephemeral: true });
+                }
+                break;
+            case 'start':
+                if (interaction.member.permissions.has('ADMINISTRATOR')) {
+                    await handleStartButton(interaction, tournamentId);
+                } else {
+                    await interaction.reply({ content: 'Only administrators can start the tournament.', ephemeral: true });
+                }
+                break;
+        }
     }
-  } catch (error) {
-    console.error('Error handling interaction:', error);
-    if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({ content: 'There was an error while processing this interaction!', ephemeral: true }).catch(console.error);
-    }
-  }
 });
+
+async function handleSeedingButton(interaction, tournamentId) {
+    const tournamentCommand = client.commands.get('seed');
+    if (tournamentCommand) {
+        await tournamentCommand.execute(interaction, tournamentId);
+    } else {
+        await interaction.reply({ content: 'Seeding command not found.', ephemeral: true });
+    }
+}
+
+async function handleStartButton(interaction, tournamentId) {
+    const tournamentCommand = client.commands.get('start');
+    if (tournamentCommand) {
+        await tournamentCommand.execute(interaction, tournamentId);
+    } else {
+        await interaction.reply({ content: 'Start command not found.', ephemeral: true });
+    }
+}
 
 client.login(token);

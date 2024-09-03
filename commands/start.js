@@ -1,48 +1,48 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-
-// Assume you have a way to store and retrieve tournaments, e.g., a Map or database
-const tournaments = new Map();
+const { tournaments } = require('./createTournament.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('start')
-        .setDescription('Start a tournament, generating the initial matchups')
+        .setDescription('Start a tournament')
         .addStringOption(option => 
-            option.setName('tournament')
-                .setDescription('The name of the tournament')
+            option.setName('tournament_id')
+                .setDescription('The ID of the tournament')
                 .setRequired(true)),
-    async execute(interaction) {
+
+    async execute(interaction, tournamentId = null) {
         if (!interaction.member.permissions.has('ADMINISTRATOR')) {
-            await interaction.reply({ content: 'You need to be an administrator to start a tournament.', ephemeral: true });
-            return;
+            return await interaction.reply({ content: 'You need to be an administrator to use this command.', ephemeral: true });
         }
 
-        const tournamentName = interaction.options.getString('tournament');
-        const tournament = tournaments.get(tournamentName);
+        tournamentId = tournamentId || interaction.options.getString('tournament_id');
 
+        const tournament = tournaments.get(tournamentId);
         if (!tournament) {
-            await interaction.reply({ content: 'Tournament not found.', ephemeral: true });
-            return;
+            return await interaction.reply({ content: 'Tournament not found.', ephemeral: true });
         }
 
-        // Implement logic to start the tournament and generate initial matchups
-        // This is a placeholder - you'll need to implement the actual logic
-        const success = tournament.start();
-
-        if (success) {
-            const embed = new EmbedBuilder()
-                .setColor('#00FF00')
-                .setTitle('Tournament Started')
-                .setDescription(`The tournament "${tournamentName}" has been started successfully. Initial matchups have been generated.`)
-                .addFields(
-                    { name: 'Participants', value: tournament.teams.length.toString() },
-                    { name: 'First Round Matches', value: tournament.getCurrentRoundMatchups() }
-                );
-
-            await interaction.reply({ embeds: [embed] });
-        } else {
-            await interaction.reply({ content: 'There was an error starting the tournament. Please check that all conditions are met and try again.', ephemeral: true });
+        if (tournament.status !== 'CREATED') {
+            return await interaction.reply({ content: 'This tournament has already started or ended.', ephemeral: true });
         }
+
+        if (tournament.participants.length < 2) {
+            return await interaction.reply({ content: 'Not enough participants to start the tournament.', ephemeral: true });
+        }
+
+        tournament.status = 'STARTED';
+        // Here you would implement the logic to create initial matchups
+        // For simplicity, we'll just acknowledge the tournament has started
+
+        const embed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle(`Tournament Started: ${tournament.title}`)
+            .setDescription('The tournament has officially begun!')
+            .addFields(
+                { name: 'Participants', value: tournament.participants.length.toString() },
+                { name: 'Status', value: tournament.status }
+            );
+
+        await interaction.reply({ embeds: [embed] });
     },
-    // No handleInteraction method needed for start command
 };

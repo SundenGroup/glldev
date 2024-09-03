@@ -200,25 +200,40 @@ module.exports = {
         }
 
         const signupButton = new ButtonBuilder()
-            .setCustomId('signup_button')
+            .setCustomId(`signup_${tournament.id}`)
             .setLabel('Sign Up')
             .setStyle(ButtonStyle.Success);
 
-        const row = new ActionRowBuilder()
-            .addComponents(signupButton);
+        const seedButton = new ButtonBuilder()
+            .setCustomId(`seed_${tournament.id}`)
+            .setLabel('Seed Tournament')
+            .setStyle(ButtonStyle.Primary);
+
+        const startButton = new ButtonBuilder()
+            .setCustomId(`start_${tournament.id}`)
+            .setLabel('Start Tournament')
+            .setStyle(ButtonStyle.Primary);
+
+        const playerRow = new ActionRowBuilder().addComponents(signupButton);
+        const adminRow = new ActionRowBuilder().addComponents(seedButton, startButton);
 
         const announceEmbed = new EmbedBuilder()
             .setColor('#00FF00')
             .setTitle(tournament.title)
             .setDescription(tournament.description)
             .addFields(
+                { name: 'Tournament ID', value: tournament.id },
                 { name: 'Date and Time', value: tournament.dateTime.toISOString() },
                 { name: 'Game', value: tournament.game.name },
                 { name: 'Max Teams', value: tournament.maxTeams.toString() },
                 { name: 'Signed Up', value: '0/' + tournament.maxTeams }
             );
 
-        await announcementChannel.send({ embeds: [announceEmbed], components: [row] });
+        await announcementChannel.send({ 
+            embeds: [announceEmbed], 
+            components: [playerRow, adminRow]
+        });
+        
         await interaction.reply({ content: 'Tournament finalized and announced!', ephemeral: true });
     }
 };
