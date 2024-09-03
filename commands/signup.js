@@ -1,86 +1,107 @@
 const { SlashCommandBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
-const { Tournament } = require('../utils/tournament.js');
 
-// Assume you have a way to store and retrieve tournaments, e.g., a Map or database
+// In-memory storage for tournaments (replace with database in production)
 const tournaments = new Map();
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('signup')
-        .setDescription('Sign up for a tournament')
-        .addStringOption(option => 
-            option.setName('tournament')
-                .setDescription('The name of the tournament')
-                .setRequired(true)),
+        .setDescription('Sign up for the current tournament'),
+    
     async execute(interaction) {
-        const tournamentName = interaction.options.getString('tournament');
-        const tournament = tournaments.get(tournamentName);
-
+        const tournament = tournaments.get(interaction.guildId);
         if (!tournament) {
-            await interaction.reply({ content: 'Tournament not found.', ephemeral: true });
+            await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
             return;
         }
 
-        if (tournament.teams.length >= tournament.maxTeams) {
+        if (tournament.participants.length >= tournament.maxTeams * tournament.game.teamSize) {
             await interaction.reply({ content: 'The tournament is full.', ephemeral: true });
             return;
         }
 
         const modal = new ModalBuilder()
-            .setCustomId('signup_modal')
+            .setCustomId('tournament_signup_modal')
             .setTitle('Tournament Sign Up');
 
-        const inGameNameInput = new TextInputBuilder()
-            .setCustomId('in_game_name')
-            .setLabel("Your In-Game Name")
-            .setStyle(TextInputStyle.Short);
-
-        const profileLinkInput = new TextInputBuilder()
-            .setCustomId('profile_link')
-            .setLabel("Your GeoGuessr Profile Link (if applicable)")
+        const teamNameInput = new TextInputBuilder()
+            .setCustomId('team_name')
+            .setLabel('Team Name')
             .setStyle(TextInputStyle.Short)
-            .setRequired(false);
+            .setRequired(true);
 
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(inGameNameInput),
-            new ActionRowBuilder().addComponents(profileLinkInput)
-        );
+        modal.addComponents(new ActionRowBuilder().addComponents(teamNameInput));
+
+        for (let i = 1; i <= tournament.game.teamSize; i++) {
+            const playerInput = new TextInputBuilder()
+                .setCustomId(`player_${i}`)
+                .setLabel(`Player ${i} Name`)
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+            modal.addComponents(new ActionRowBuilder().addComponents(playerInput));
+        }
+
+        if (tournament.game.name === 'GeoGuessr') {
+            const profileLinkInput = new TextInputBuilder()
+                .setCustomId('geoguessr_profile')
+                .setLabel('GeoGuessr Profile Link')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+            modal.addComponents(new ActionRowBuilder().addComponents(profileLinkInput));
+        }
 
         await interaction.showModal(modal);
     },
+
     async handleInteraction(interaction) {
-        if (interaction.isModalSubmit() && interaction.customId === 'signup_modal') {
-            const tournamentName = interaction.options.getString('tournament');
-            const tournament = tournaments.get(tournamentName);
+        if (interaction.isModalSubmit() && interaction.customId === 'tournament_signup_modal') {
+            const tournament = tournaments.get(interaction.guildId);
+            if (!tournament) {
+                await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+                return;
+            }
 
-            const inGameName = interaction.fields.getTextInputValue('in_game_name');
-            const profileLink = interaction.fields.getTextInputValue('profile_link');
+            const teamName = interaction.fields.getTextInputValue('team_name');
+            const players = [];
+            for (let i = 1; i <= tournament.game.teamSize; i++) {
+                players.push(interaction.fields.getTextInputValue(`player_${i}`));
+            }
 
-            const playerInfo = {
-                discordId: interaction.user.id,
-                inGameName: inGameName,
-                profileLink: profileLink
-            };
+            let geoGuessrProfile = '';
+            if (tournament.game.name === 'GeoGuessr') {
+                geoGuessrProfile = interaction.fields.getTextInputValue('geoguessr_profile');
+            }
 
-            try {
-                const team = await tournament.addTeam(inGameName, playerInfo);
-                
-                const embed = new EmbedBuilder()
-                    .setColor('#00FF00')
-                    .setTitle('Tournament Sign Up Successful')
-                    .addFields(
-                        { name: 'Player', value: `<@${interaction.user.id}> (${inGameName})` },
-                        { name: 'Tournament', value: tournament.title },
-                        { name: 'Current Players', value: `${tournament.teams.length}/${tournament.maxTeams}` }
-                    );
+            tournament.participants.push({ teamName, players, geoGuessrProfile });
 
-                if (team.player.rating) {
-                    embed.addFields({ name: 'Rating', value: team.player.rating.toString() });
+            const embed = new EmbedBuilder()
+                .setColor('#00FF00')
+                .setTitle('Tournament Sign Up Successful')
+                .addFields(
+                    { name: 'Team Name', value: teamName },
+                    { name: 'Players', value: players.join(', ') },
+                    { name: 'Current Teams', value: `${tournament.participants.length}/${tournament.maxTeams}` }
+                );
+
+            if (geoGuessrProfile) {
+                embed.addFields({ name: 'GeoGuessr Profile', value: geoGuessrProfile });
+            }
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
+
+            // Update the announcement message with the new participant count
+            const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
+            if (announcementChannel) {
+                const messages = await announcementChannel.messages.fetch({ limit: 1 });
+                const lastMessage = messages.first();
+                if (lastMessage && lastMessage.embeds.length > 0) {
+                    const updatedEmbed = EmbedBuilder.from(lastMessage.embeds[0])
+                        .setFields(
+                            ...lastMessage.embeds[0].fields.filter(field => field.name !== 'Signed Up'),
+                            { name: 'Signed Up', value: `${tournament.participants.length}/${tournament.maxTeams}` }
+                        );
+                    await lastMessage.edit({ embeds: [updatedEmbed] });
                 }
-
-                await interaction.reply({ embeds: [embed], ephemeral: true });
-            } catch (error) {
-                await interaction.reply({ content: 'There was an error processing your signup. Please try again.', ephemeral: true });
             }
         }
     }

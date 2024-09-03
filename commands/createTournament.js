@@ -11,13 +11,15 @@ const GAME_PRESETS = {
     OTHER: { name: "Other", teamSize: null }
 };
 
+// In-memory storage for tournaments (replace with database in production)
+const tournaments = new Map();
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('create_tournament')
         .setDescription('Start the process of creating a new tournament'),
     
     async execute(interaction) {
-        console.log('Executing create_tournament command');
         if (!interaction.member.permissions.has('ADMINISTRATOR')) {
             await interaction.reply({ content: 'You need to be an administrator to create a tournament.', ephemeral: true });
             return;
@@ -43,13 +45,9 @@ module.exports = {
     },
 
     async handleInteraction(interaction) {
-        console.log(`Handling interaction in create_tournament: ${interaction.customId}`);
-        
         if (interaction.isButton() && interaction.customId.startsWith('create_tournament_game_')) {
             const gameKey = interaction.customId.split('_')[3];
             const game = GAME_PRESETS[gameKey];
-
-            console.log(`Selected game: ${game.name}`);
 
             const modal = new ModalBuilder()
                 .setCustomId('create_tournament_details_modal')
@@ -88,15 +86,13 @@ module.exports = {
 
             await interaction.showModal(modal);
         } else if (interaction.isModalSubmit() && interaction.customId === 'create_tournament_details_modal') {
-            console.log('Processing tournament details modal submission');
             const title = interaction.fields.getTextInputValue('title');
             const description = interaction.fields.getTextInputValue('description');
             const dateTime = interaction.fields.getTextInputValue('date_time');
             const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
 
-            const tournament = new Tournament(title, description, new Date(dateTime), maxTeams);
-            // Store the tournament in your database or data structure
-            console.log('Created tournament:', tournament);
+            const tournament = new Tournament(title, description, new Date(dateTime), maxTeams, GAME_PRESETS[gameKey]);
+            tournaments.set(interaction.guildId, tournament);
 
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
@@ -105,13 +101,66 @@ module.exports = {
                     { name: 'Title', value: tournament.title },
                     { name: 'Description', value: tournament.description },
                     { name: 'Date and Time', value: tournament.dateTime.toISOString() },
-                    { name: 'Max Teams', value: tournament.maxTeams.toString() }
+                    { name: 'Max Teams', value: tournament.maxTeams.toString() },
+                    { name: 'Game', value: tournament.game.name }
                 );
 
-            await interaction.reply({ content: 'Tournament created successfully!', embeds: [embed], ephemeral: true });
-        } else {
-            console.log('Unhandled interaction in create_tournament');
-            await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
+            const modifyButton = new ButtonBuilder()
+                .setCustomId('modify_tournament')
+                .setLabel('Modify Settings')
+                .setStyle(ButtonStyle.Primary);
+
+            const finalizeButton = new ButtonBuilder()
+                .setCustomId('finalize_tournament')
+                .setLabel('Finalize Tournament')
+                .setStyle(ButtonStyle.Success);
+
+            const row = new ActionRowBuilder()
+                .addComponents(modifyButton, finalizeButton);
+
+            await interaction.reply({ 
+                content: 'Tournament created successfully!', 
+                embeds: [embed], 
+                components: [row],
+                ephemeral: false 
+            });
+        } else if (interaction.isButton() && interaction.customId === 'modify_tournament') {
+            // Implement modify tournament logic here
+            await interaction.reply({ content: 'Modify tournament feature coming soon!', ephemeral: true });
+        } else if (interaction.isButton() && interaction.customId === 'finalize_tournament') {
+            const tournament = tournaments.get(interaction.guildId);
+            if (!tournament) {
+                await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+                return;
+            }
+
+            const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
+            if (!announcementChannel) {
+                await interaction.reply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', ephemeral: true });
+                return;
+            }
+
+            const signupButton = new ButtonBuilder()
+                .setCustomId('tournament_signup')
+                .setLabel('Sign Up')
+                .setStyle(ButtonStyle.Success);
+
+            const row = new ActionRowBuilder()
+                .addComponents(signupButton);
+
+            const announceEmbed = new EmbedBuilder()
+                .setColor('#00FF00')
+                .setTitle(tournament.title)
+                .setDescription(tournament.description)
+                .addFields(
+                    { name: 'Date and Time', value: tournament.dateTime.toISOString() },
+                    { name: 'Game', value: tournament.game.name },
+                    { name: 'Max Teams', value: tournament.maxTeams.toString() },
+                    { name: 'Signed Up', value: '0/' + tournament.maxTeams }
+                );
+
+            await announcementChannel.send({ embeds: [announceEmbed], components: [row] });
+            await interaction.reply({ content: 'Tournament finalized and announced!', ephemeral: true });
         }
     }
 };

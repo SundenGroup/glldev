@@ -21,20 +21,20 @@ client.once('ready', () => {
 });
 
 client.on('interactionCreate', async interaction => {
-  console.log(`Received interaction: ${interaction.type} - ${interaction.customId || interaction.commandName}`);
-
   try {
     if (interaction.isCommand()) {
       const command = client.commands.get(interaction.commandName);
-      if (!command) {
-        console.log(`No command matching ${interaction.commandName} was found.`);
-        return;
-      }
+      if (!command) return;
 
       await command.execute(interaction);
     } else if (interaction.isButton() || interaction.isModalSubmit()) {
-      const commandName = interaction.customId.split('_')[0] + '_' + interaction.customId.split('_')[1];
-      console.log(`Looking for command handler: ${commandName}`);
+      let commandName;
+      if (interaction.isButton()) {
+        commandName = interaction.customId.split('_')[0];
+      } else {
+        commandName = interaction.customId.split('_')[0];
+      }
+      
       const command = client.commands.get(commandName);
 
       if (command && typeof command.handleInteraction === 'function') {
