@@ -1,38 +1,105 @@
-// File: commands/createTournament.js
-const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-const { createTournament } = require('../utils/tournament.js');
+const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { Tournament } = require('../utils/tournament.js');
+
+const GAME_PRESETS = {
+    VALORANT: { name: "VALORANT", teamSize: 5 },
+    GEOGUESSR: { name: "GeoGuessr", teamSize: 1 },
+    PUBG: { name: "PUBG", teamSize: 4 },
+    DEADLOCK: { name: "Deadlock", teamSize: 5 },
+    CS2: { name: "Counter-Strike 2", teamSize: 5 },
+    SPLITGATE2: { name: "SplitGate 2", teamSize: 3 },
+    OTHER: { name: "Other", teamSize: null }
+};
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('create_tournament')
-    .setDescription('Start the process of creating a new tournament'),
-  async execute(interaction) {
-    if (!interaction.member.permissions.has('ADMINISTRATOR')) {
-      await interaction.reply({ content: 'You need to be an administrator to create a tournament.', ephemeral: true });
-      return;
+    data: new SlashCommandBuilder()
+        .setName('create_tournament')
+        .setDescription('Start the process of creating a new tournament'),
+    async execute(interaction) {
+        if (!interaction.member.permissions.has('ADMINISTRATOR')) {
+            await interaction.reply({ content: 'You need to be an administrator to create a tournament.', ephemeral: true });
+            return;
+        }
+
+        const gameButtons = Object.entries(GAME_PRESETS).map(([key, value]) => {
+            return new ButtonBuilder()
+                .setCustomId(`createTournament_game_${key}`)
+                .setLabel(value.name)
+                .setStyle(ButtonStyle.Primary);
+        });
+
+        const rows = [];
+        for (let i = 0; i < gameButtons.length; i += 5) {
+            rows.push(new ActionRowBuilder().addComponents(gameButtons.slice(i, i + 5)));
+        }
+
+        await interaction.reply({
+            content: 'Select the game for your tournament:',
+            components: rows,
+            ephemeral: true
+        });
+    },
+    async handleInteraction(interaction) {
+        if (interaction.isButton() && interaction.customId.startsWith('createTournament_game_')) {
+            const gameKey = interaction.customId.split('_')[2];
+            const game = GAME_PRESETS[gameKey];
+
+            const modal = new ModalBuilder()
+                .setCustomId('createTournament_details_modal')
+                .setTitle('Tournament Details');
+
+            const titleInput = new TextInputBuilder()
+                .setCustomId('title')
+                .setLabel('Enter the tournament title')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            const descriptionInput = new TextInputBuilder()
+                .setCustomId('description')
+                .setLabel('Enter the tournament description')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true);
+
+            const dateTimeInput = new TextInputBuilder()
+                .setCustomId('date_time')
+                .setLabel('Enter the date and time (YYYY-MM-DD HH:MM)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            const maxTeamsInput = new TextInputBuilder()
+                .setCustomId('max_teams')
+                .setLabel('Enter the maximum number of teams')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(titleInput),
+                new ActionRowBuilder().addComponents(descriptionInput),
+                new ActionRowBuilder().addComponents(dateTimeInput),
+                new ActionRowBuilder().addComponents(maxTeamsInput)
+            );
+
+            await interaction.showModal(modal);
+        } else if (interaction.isModalSubmit() && interaction.customId === 'createTournament_details_modal') {
+            const title = interaction.fields.getTextInputValue('title');
+            const description = interaction.fields.getTextInputValue('description');
+            const dateTime = interaction.fields.getTextInputValue('date_time');
+            const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
+
+            const tournament = new Tournament(title, description, new Date(dateTime), maxTeams);
+            // Store the tournament in your database or data structure
+
+            const embed = new EmbedBuilder()
+                .setColor('#0099ff')
+                .setTitle('Tournament Created')
+                .addFields(
+                    { name: 'Title', value: tournament.title },
+                    { name: 'Description', value: tournament.description },
+                    { name: 'Date and Time', value: tournament.dateTime.toISOString() },
+                    { name: 'Max Teams', value: tournament.maxTeams.toString() }
+                );
+
+            await interaction.reply({ content: 'Tournament created successfully!', embeds: [embed], ephemeral: true });
+        }
     }
-
-    // Start the tournament creation process
-    const tournament = createTournament(interaction.user.id);
-
-    const embed = new EmbedBuilder()
-      .setColor('#0099ff')
-      .setTitle('Tournament Creation')
-      .setDescription('Let\'s set up your tournament! First, choose a game:');
-
-    const row = new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId('game_geoguessr')
-          .setLabel('GeoGuessr')
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId('game_valorant')
-          .setLabel('VALORANT')
-          .setStyle(ButtonStyle.Primary),
-        // Add more game options here
-      );
-
-    await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
-  },
 };
