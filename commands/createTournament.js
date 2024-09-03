@@ -184,8 +184,9 @@ module.exports = {
     },
 
     async finalizeTournament(interaction) {
+        console.log('Finalizing tournament');
         try {
-            const tournament = tournaments.get(interaction.guildId);
+            const tournament = Array.from(tournaments.values()).find(t => t.id === interaction.customId.split('_')[2]);
             if (!tournament) {
                 await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
                 return;
