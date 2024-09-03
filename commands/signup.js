@@ -53,11 +53,15 @@ module.exports = {
         await interaction.showModal(modal);
     },
 
-    async handleInteraction(interaction) {
-        console.log(`Handling interaction: ${interaction.customId}`);
+    // ... (previous code remains the same)
+
+async handleInteraction(interaction) {
+    console.log(`Handling interaction: ${interaction.customId}`);
+    try {
         if (interaction.isModalSubmit() && interaction.customId === 'signup_modal') {
             const tournament = tournaments.get(interaction.guildId);
             if (!tournament) {
+                console.log('No active tournament found for guild:', interaction.guildId);
                 await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
                 return;
             }
@@ -72,6 +76,8 @@ module.exports = {
             if (tournament.game.name === 'GeoGuessr') {
                 geoGuessrProfile = interaction.fields.getTextInputValue('geoguessr_profile');
             }
+
+            console.log('Signup data:', { teamName, players, geoGuessrProfile });
 
             if (!tournament.participants) {
                 tournament.participants = [];
@@ -111,5 +117,8 @@ module.exports = {
             console.log('Unhandled interaction:', interaction.customId);
             await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
         }
+    } catch (error) {
+        console.error('Error in signup handleInteraction:', error);
+        await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
     }
-};
+}

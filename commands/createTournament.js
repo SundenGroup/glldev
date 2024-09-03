@@ -68,10 +68,18 @@ module.exports = {
                     .setStyle(TextInputStyle.Paragraph)
                     .setRequired(true);
 
-                const dateTimeInput = new TextInputBuilder()
-                    .setCustomId('date_time')
-                    .setLabel('Enter the date and time (YYYY-MM-DD HH:MM)')
+                const dateInput = new TextInputBuilder()
+                    .setCustomId('date')
+                    .setLabel('Enter the date (YYYY-MM-DD)')
                     .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('e.g., 2024-12-31')
+                    .setRequired(true);
+
+                    const timeInput = new TextInputBuilder()
+                    .setCustomId('time')
+                    .setLabel('Enter the time (HH:MM)')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('e.g., 20:30')
                     .setRequired(true);
 
                 const maxTeamsInput = new TextInputBuilder()
@@ -83,8 +91,9 @@ module.exports = {
                 modal.addComponents(
                     new ActionRowBuilder().addComponents(titleInput),
                     new ActionRowBuilder().addComponents(descriptionInput),
-                    new ActionRowBuilder().addComponents(dateTimeInput),
-                    new ActionRowBuilder().addComponents(maxTeamsInput)
+                    new ActionRowBuilder().addComponents(dateInput),
+                    new ActionRowBuilder().addComponents(timeInput),
+        	       new ActionRowBuilder().addComponents(maxTeamsInput)
                 );
 
                 await interaction.showModal(modal);
@@ -105,7 +114,9 @@ module.exports = {
         console.log('Processing tournament details modal submission');
         const title = interaction.fields.getTextInputValue('title');
         const description = interaction.fields.getTextInputValue('description');
-        const dateTime = interaction.fields.getTextInputValue('date_time');
+        const date = interaction.fields.getTextInputValue('date');
+        const time = interaction.fields.getTextInputValue('time');
+        const dateTime = new Date(`${date}T${time}:00`);
         const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
 
         const tournament = new Tournament(title, description, new Date(dateTime), maxTeams);
