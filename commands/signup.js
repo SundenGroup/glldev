@@ -1,6 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
-
-// Import the tournaments Map from createTournament.js
 const { tournaments } = require('./createTournament.js');
 
 module.exports = {
@@ -30,16 +28,15 @@ module.exports = {
     async handleInteraction(interaction) {
         console.log(`Handling interaction: ${interaction.customId}`);
         try {
-            if (interaction.isButton() && interaction.customId === 'signup_button') {
-                const tournament = tournaments.get(interaction.guildId);
+            const [action, tournamentId] = interaction.customId.split('_');
+            if (action === 'signup') {
+                const tournament = Array.from(tournaments.values()).find(t => t.id === tournamentId);
                 if (!tournament) {
-                    console.log('No active tournament found for guild:', interaction.guildId);
+                    console.log('No active tournament found for ID:', tournamentId);
                     await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
                     return;
                 }
                 await this.showSignupModal(interaction, tournament);
-            } else if (interaction.isModalSubmit() && interaction.customId === 'signup_modal') {
-                await this.handleSignupSubmit(interaction);
             } else {
                 console.log('Unhandled interaction:', interaction.customId);
                 await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
@@ -54,7 +51,7 @@ module.exports = {
 
     async showSignupModal(interaction, tournament) {
         const modal = new ModalBuilder()
-            .setCustomId('signup_modal')
+            .setCustomId(`signup_modal_${tournament.id}`)
             .setTitle('Tournament Sign Up');
 
         const teamNameInput = new TextInputBuilder()
@@ -68,7 +65,6 @@ module.exports = {
         const teamSize = tournament.game.teamSize || 1;
         console.log('Team size:', teamSize);
 
-        // Limit the number of player inputs to 5 (Discord's maximum)
         const playerInputs = Math.min(teamSize, 5);
         for (let i = 1; i <= playerInputs; i++) {
             const playerInput = new TextInputBuilder()
@@ -92,9 +88,10 @@ module.exports = {
     },
 
     async handleSignupSubmit(interaction) {
-        const tournament = tournaments.get(interaction.guildId);
+        const [, , tournamentId] = interaction.customId.split('_');
+        const tournament = Array.from(tournaments.values()).find(t => t.id === tournamentId);
         if (!tournament) {
-            console.log('No active tournament found for guild:', interaction.guildId);
+            console.log('No active tournament found for ID:', tournamentId);
             await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
             return;
         }
@@ -131,8 +128,6 @@ module.exports = {
 
         if (geoGuessrProfile) {
             embed.addFields({ name: 'GeoGuessr Profile', value: geoGuessrProfile });
-            // Here you would add the code to fetch and display the GeoGuessr rating
-            // For now, we'll just add a placeholder
             embed.addFields({ name: 'GeoGuessr Rating', value: 'Rating will be fetched' });
         }
 
@@ -141,9 +136,9 @@ module.exports = {
         // Update the announcement message with the new participant count
         const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
         if (announcementChannel) {
-            const messages = await announcementChannel.messages.fetch({ limit: 1 });
-            const lastMessage = messages.first();
-            if (lastMessage && lastMessage.embeds.length > 0) {
+            const messages = await announcementChannel.messages.fetch({ limit: 10 });
+            const lastMessage = messages.find(msg => msg.embeds.length > 0 && msg.embeds[0].title === tournament.title);
+            if (lastMessage) {
                 const updatedEmbed = EmbedBuilder.from(lastMessage.embeds[0])
                     .setFields(
                         ...lastMessage.embeds[0].fields.filter(field => field.name !== 'Signed Up'),

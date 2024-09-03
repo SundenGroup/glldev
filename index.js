@@ -30,11 +30,6 @@ client.once('ready', () => {
 });
 
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isRepliable()) {
-        console.log('Interaction is no longer repliable');
-        return;
-    }
-
     try {
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
@@ -79,7 +74,7 @@ client.on('interactionCreate', async interaction => {
                     break;
             }
         } else if (interaction.isModalSubmit()) {
-            if (interaction.customId === 'signup_modal') {
+            if (interaction.customId.startsWith('signup_modal_')) {
                 const signupCommand = client.commands.get('signup');
                 if (signupCommand) {
                     await signupCommand.handleSignupSubmit(interaction);
