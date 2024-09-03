@@ -54,7 +54,7 @@ client.on('interactionCreate', async interaction => {
   } catch (error) {
     console.error('Error handling interaction:', error);
     if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({ content: 'There was an error while processing this interaction!', ephemeral: true });
+      await interaction.reply({ content: 'There was an error while processing this interaction!', ephemeral: true }).catch(console.error);
     }
   }
 });
