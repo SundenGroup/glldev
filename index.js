@@ -42,7 +42,7 @@ client.on('interactionCreate', async interaction => {
             switch(action) {
                 case 'signup':
                     const signupCommand = client.commands.get('signup');
-                    if (signupCommand) {
+                    if (signupCommand && typeof signupCommand.handleInteraction === 'function') {
                         await signupCommand.handleInteraction(interaction);
                     }
                     break;
@@ -76,7 +76,7 @@ client.on('interactionCreate', async interaction => {
         } else if (interaction.isModalSubmit()) {
             if (interaction.customId.startsWith('signup_modal_')) {
                 const signupCommand = client.commands.get('signup');
-                if (signupCommand) {
+                if (signupCommand && typeof signupCommand.handleSignupSubmit === 'function') {
                     await signupCommand.handleSignupSubmit(interaction);
                 }
             } else {
