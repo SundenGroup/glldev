@@ -33,8 +33,15 @@ client.on('interactionCreate', async interaction => {
 
       await command.execute(interaction);
     } else if (interaction.isButton() || interaction.isModalSubmit()) {
-      const customId = interaction.customId.split('_')[0];
-      const command = client.commands.get(customId);
+      let commandName;
+      if (interaction.isButton()) {
+        commandName = interaction.customId.split('_')[0];
+      } else {
+        commandName = interaction.customId.split('_')[0];
+      }
+      
+      console.log(`Looking for command handler: ${commandName}`);
+      const command = client.commands.get(commandName);
 
       if (command && typeof command.handleInteraction === 'function') {
         await command.handleInteraction(interaction);
