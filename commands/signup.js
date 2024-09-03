@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
-// In-memory storage for tournaments (replace with database in production)
+// Ensure this is the same tournaments Map used in createTournament.js
 const tournaments = new Map();
 
 module.exports = {
@@ -9,17 +9,50 @@ module.exports = {
         .setDescription('Sign up for the current tournament'),
     
     async execute(interaction) {
+        console.log('Executing signup command');
         const tournament = tournaments.get(interaction.guildId);
         if (!tournament) {
+            console.log('No active tournament found for guild:', interaction.guildId);
             await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
             return;
         }
+
+        console.log('Tournament found:', tournament);
 
         if (tournament.participants && tournament.participants.length >= tournament.maxTeams) {
             await interaction.reply({ content: 'The tournament is full.', ephemeral: true });
             return;
         }
 
+        await this.showSignupModal(interaction, tournament);
+    },
+
+    async handleInteraction(interaction) {
+        console.log(`Handling interaction: ${interaction.customId}`);
+        try {
+            if (interaction.isButton() && interaction.customId === 'signup_button') {
+                const tournament = tournaments.get(interaction.guildId);
+                if (!tournament) {
+                    console.log('No active tournament found for guild:', interaction.guildId);
+                    await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+                    return;
+                }
+                await this.showSignupModal(interaction, tournament);
+            } else if (interaction.isModalSubmit() && interaction.customId === 'signup_modal') {
+                await this.handleSignupSubmit(interaction);
+            } else {
+                console.log('Unhandled interaction:', interaction.customId);
+                await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
+            }
+        } catch (error) {
+            console.error('Error in signup handleInteraction:', error);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: `An error occurred while processing your request: ${error.message}`, ephemeral: true });
+            }
+        }
+    },
+
+    async showSignupModal(interaction, tournament) {
         const modal = new ModalBuilder()
             .setCustomId('signup_modal')
             .setTitle('Tournament Sign Up');
@@ -32,7 +65,10 @@ module.exports = {
 
         modal.addComponents(new ActionRowBuilder().addComponents(teamNameInput));
 
-        for (let i = 1; i <= tournament.game.teamSize; i++) {
+        const teamSize = tournament.game && tournament.game.teamSize ? tournament.game.teamSize : 1;
+        console.log('Team size:', teamSize);
+
+        for (let i = 1; i <= teamSize; i++) {
             const playerInput = new TextInputBuilder()
                 .setCustomId(`player_${i}`)
                 .setLabel(`Player ${i} Name`)
@@ -41,7 +77,7 @@ module.exports = {
             modal.addComponents(new ActionRowBuilder().addComponents(playerInput));
         }
 
-        if (tournament.game.name === 'GeoGuessr') {
+        if (tournament.game && tournament.game.name === 'GeoGuessr') {
             const profileLinkInput = new TextInputBuilder()
                 .setCustomId('geoguessr_profile')
                 .setLabel('GeoGuessr Profile Link')
@@ -53,71 +89,63 @@ module.exports = {
         await interaction.showModal(modal);
     },
 
-    async handleInteraction(interaction) {
-        console.log(`Handling interaction: ${interaction.customId}`);
-        try {
-            if (interaction.isModalSubmit() && interaction.customId === 'signup_modal') {
-                const tournament = tournaments.get(interaction.guildId);
-                if (!tournament) {
-                    console.log('No active tournament found for guild:', interaction.guildId);
-                    await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
-                    return;
-                }
+    async handleSignupSubmit(interaction) {
+        const tournament = tournaments.get(interaction.guildId);
+        if (!tournament) {
+            console.log('No active tournament found for guild:', interaction.guildId);
+            await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+            return;
+        }
 
-                const teamName = interaction.fields.getTextInputValue('team_name');
-                const players = [];
-                for (let i = 1; i <= tournament.game.teamSize; i++) {
-                    players.push(interaction.fields.getTextInputValue(`player_${i}`));
-                }
+        console.log('Tournament found:', tournament);
 
-                let geoGuessrProfile = '';
-                if (tournament.game.name === 'GeoGuessr') {
-                    geoGuessrProfile = interaction.fields.getTextInputValue('geoguessr_profile');
-                }
+        const teamName = interaction.fields.getTextInputValue('team_name');
+        const players = [];
+        const teamSize = tournament.game && tournament.game.teamSize ? tournament.game.teamSize : 1;
+        for (let i = 1; i <= teamSize; i++) {
+            players.push(interaction.fields.getTextInputValue(`player_${i}`));
+        }
 
-                console.log('Signup data:', { teamName, players, geoGuessrProfile });
+        let geoGuessrProfile = '';
+        if (tournament.game && tournament.game.name === 'GeoGuessr') {
+            geoGuessrProfile = interaction.fields.getTextInputValue('geoguessr_profile');
+        }
 
-                if (!tournament.participants) {
-                    tournament.participants = [];
-                }
-                tournament.participants.push({ teamName, players, geoGuessrProfile });
+        console.log('Signup data:', { teamName, players, geoGuessrProfile });
 
-                const embed = new EmbedBuilder()
-                    .setColor('#00FF00')
-                    .setTitle('Tournament Sign Up Successful')
-                    .addFields(
-                        { name: 'Team Name', value: teamName },
-                        { name: 'Players', value: players.join(', ') },
-                        { name: 'Current Teams', value: `${tournament.participants.length}/${tournament.maxTeams}` }
+        if (!tournament.participants) {
+            tournament.participants = [];
+        }
+        tournament.participants.push({ teamName, players, geoGuessrProfile });
+
+        const embed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle('Tournament Sign Up Successful')
+            .addFields(
+                { name: 'Team Name', value: teamName },
+                { name: 'Players', value: players.join(', ') },
+                { name: 'Current Teams', value: `${tournament.participants.length}/${tournament.maxTeams}` }
+            );
+
+        if (geoGuessrProfile) {
+            embed.addFields({ name: 'GeoGuessr Profile', value: geoGuessrProfile });
+        }
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+
+        // Update the announcement message with the new participant count
+        const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
+        if (announcementChannel) {
+            const messages = await announcementChannel.messages.fetch({ limit: 1 });
+            const lastMessage = messages.first();
+            if (lastMessage && lastMessage.embeds.length > 0) {
+                const updatedEmbed = EmbedBuilder.from(lastMessage.embeds[0])
+                    .setFields(
+                        ...lastMessage.embeds[0].fields.filter(field => field.name !== 'Signed Up'),
+                        { name: 'Signed Up', value: `${tournament.participants.length}/${tournament.maxTeams}` }
                     );
-
-                if (geoGuessrProfile) {
-                    embed.addFields({ name: 'GeoGuessr Profile', value: geoGuessrProfile });
-                }
-
-                await interaction.reply({ embeds: [embed], ephemeral: true });
-
-                // Update the announcement message with the new participant count
-                const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
-                if (announcementChannel) {
-                    const messages = await announcementChannel.messages.fetch({ limit: 1 });
-                    const lastMessage = messages.first();
-                    if (lastMessage && lastMessage.embeds.length > 0) {
-                        const updatedEmbed = EmbedBuilder.from(lastMessage.embeds[0])
-                            .setFields(
-                                ...lastMessage.embeds[0].fields.filter(field => field.name !== 'Signed Up'),
-                                { name: 'Signed Up', value: `${tournament.participants.length}/${tournament.maxTeams}` }
-                            );
-                        await lastMessage.edit({ embeds: [updatedEmbed] });
-                    }
-                }
-            } else {
-                console.log('Unhandled interaction:', interaction.customId);
-                await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
+                await lastMessage.edit({ embeds: [updatedEmbed] });
             }
-        } catch (error) {
-            console.error('Error in signup handleInteraction:', error);
-            await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
         }
     }
 };

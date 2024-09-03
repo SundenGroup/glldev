@@ -25,15 +25,17 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isCommand()) {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
+
       await command.execute(interaction);
     } else if (interaction.isButton() || interaction.isModalSubmit()) {
       let commandName;
-      const customIdParts = interaction.customId.split('_');
-      
-      if (customIdParts[0] === 'create' && customIdParts[1] === 'tournament') {
-        commandName = 'create_tournament';
-      } else {
-        commandName = customIdParts[0];
+      if (interaction.isButton()) {
+        commandName = interaction.customId.split('_')[0];
+        if (commandName === 'create' && interaction.customId.split('_')[1] === 'tournament') {
+          commandName = 'create_tournament';
+        }
+      } else if (interaction.isModalSubmit()) {
+        commandName = interaction.customId.split('_')[0];
       }
       
       console.log(`Attempting to handle interaction for command: ${commandName}`);
@@ -43,17 +45,15 @@ client.on('interactionCreate', async interaction => {
         await command.handleInteraction(interaction);
       } else {
         console.log(`No handler found for interaction: ${interaction.customId}`);
-        await interaction.reply({ content: 'This interaction is not currently handled.', ephemeral: true });
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: 'This interaction is not currently handled.', ephemeral: true });
+        }
       }
     }
   } catch (error) {
     console.error('Error handling interaction:', error);
-    const replyContent = { content: 'There was an error while processing this interaction!', ephemeral: true };
-    
-    if (interaction.deferred || interaction.replied) {
-      await interaction.editReply(replyContent).catch(console.error);
-    } else {
-      await interaction.reply(replyContent).catch(console.error);
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ content: 'There was an error while processing this interaction!', ephemeral: true });
     }
   }
 });
