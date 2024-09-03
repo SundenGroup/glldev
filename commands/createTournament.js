@@ -25,7 +25,7 @@ module.exports = {
 
         const gameButtons = Object.entries(GAME_PRESETS).map(([key, value]) => {
             return new ButtonBuilder()
-                .setCustomId(`createTournament_game_${key}`)
+                .setCustomId(`create_tournament_game_${key}`)
                 .setLabel(value.name)
                 .setStyle(ButtonStyle.Primary);
         });
@@ -43,16 +43,16 @@ module.exports = {
     },
 
     async handleInteraction(interaction) {
-        console.log(`Handling interaction in createTournament: ${interaction.customId}`);
+        console.log(`Handling interaction in create_tournament: ${interaction.customId}`);
         
-        if (interaction.isButton() && interaction.customId.startsWith('createTournament_game_')) {
-            const gameKey = interaction.customId.split('_')[2];
+        if (interaction.isButton() && interaction.customId.startsWith('create_tournament_game_')) {
+            const gameKey = interaction.customId.split('_')[3];
             const game = GAME_PRESETS[gameKey];
 
             console.log(`Selected game: ${game.name}`);
 
             const modal = new ModalBuilder()
-                .setCustomId('createTournament_details_modal')
+                .setCustomId('create_tournament_details_modal')
                 .setTitle('Tournament Details');
 
             const titleInput = new TextInputBuilder()
@@ -87,7 +87,7 @@ module.exports = {
             );
 
             await interaction.showModal(modal);
-        } else if (interaction.isModalSubmit() && interaction.customId === 'createTournament_details_modal') {
+        } else if (interaction.isModalSubmit() && interaction.customId === 'create_tournament_details_modal') {
             console.log('Processing tournament details modal submission');
             const title = interaction.fields.getTextInputValue('title');
             const description = interaction.fields.getTextInputValue('description');
@@ -110,7 +110,7 @@ module.exports = {
 
             await interaction.reply({ content: 'Tournament created successfully!', embeds: [embed], ephemeral: true });
         } else {
-            console.log('Unhandled interaction in createTournament');
+            console.log('Unhandled interaction in create_tournament');
             await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
         }
     }
