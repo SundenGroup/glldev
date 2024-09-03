@@ -30,11 +30,9 @@ client.on('interactionCreate', async interaction => {
     } else if (interaction.isButton() || interaction.isModalSubmit()) {
       let commandName;
       if (interaction.isButton()) {
-        // Extract the command name from the button's custom ID
         commandName = interaction.customId.split('_')[0] + '_' + interaction.customId.split('_')[1];
-      } else {
-        // For modal submits, use the first part of the custom ID
-        commandName = interaction.customId.split('_')[0];
+      } else if (interaction.isModalSubmit()) {
+        commandName = interaction.customId.split('_')[0] + '_' + interaction.customId.split('_')[1];
       }
       
       console.log(`Attempting to handle interaction for command: ${commandName}`);

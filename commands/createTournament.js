@@ -45,6 +45,7 @@ module.exports = {
     },
 
     async handleInteraction(interaction) {
+        console.log(`Handling interaction: ${interaction.customId}`);
         if (interaction.isButton() && interaction.customId.startsWith('create_tournament_game_')) {
             const gameKey = interaction.customId.split('_')[3];
             const game = GAME_PRESETS[gameKey];
@@ -86,12 +87,13 @@ module.exports = {
 
             await interaction.showModal(modal);
         } else if (interaction.isModalSubmit() && interaction.customId === 'create_tournament_details_modal') {
+            console.log('Processing tournament details modal submission');
             const title = interaction.fields.getTextInputValue('title');
             const description = interaction.fields.getTextInputValue('description');
             const dateTime = interaction.fields.getTextInputValue('date_time');
             const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
 
-            const tournament = new Tournament(title, description, new Date(dateTime), maxTeams, GAME_PRESETS[gameKey]);
+            const tournament = new Tournament(title, description, new Date(dateTime), maxTeams);
             tournaments.set(interaction.guildId, tournament);
 
             const embed = new EmbedBuilder()
@@ -101,8 +103,7 @@ module.exports = {
                     { name: 'Title', value: tournament.title },
                     { name: 'Description', value: tournament.description },
                     { name: 'Date and Time', value: tournament.dateTime.toISOString() },
-                    { name: 'Max Teams', value: tournament.maxTeams.toString() },
-                    { name: 'Game', value: tournament.game.name }
+                    { name: 'Max Teams', value: tournament.maxTeams.toString() }
                 );
 
             const modifyButton = new ButtonBuilder()
@@ -124,43 +125,9 @@ module.exports = {
                 components: [row],
                 ephemeral: false 
             });
-        } else if (interaction.isButton() && interaction.customId === 'modify_tournament') {
-            // Implement modify tournament logic here
-            await interaction.reply({ content: 'Modify tournament feature coming soon!', ephemeral: true });
-        } else if (interaction.isButton() && interaction.customId === 'finalize_tournament') {
-            const tournament = tournaments.get(interaction.guildId);
-            if (!tournament) {
-                await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
-                return;
-            }
-
-            const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
-            if (!announcementChannel) {
-                await interaction.reply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', ephemeral: true });
-                return;
-            }
-
-            const signupButton = new ButtonBuilder()
-                .setCustomId('tournament_signup')
-                .setLabel('Sign Up')
-                .setStyle(ButtonStyle.Success);
-
-            const row = new ActionRowBuilder()
-                .addComponents(signupButton);
-
-            const announceEmbed = new EmbedBuilder()
-                .setColor('#00FF00')
-                .setTitle(tournament.title)
-                .setDescription(tournament.description)
-                .addFields(
-                    { name: 'Date and Time', value: tournament.dateTime.toISOString() },
-                    { name: 'Game', value: tournament.game.name },
-                    { name: 'Max Teams', value: tournament.maxTeams.toString() },
-                    { name: 'Signed Up', value: '0/' + tournament.maxTeams }
-                );
-
-            await announcementChannel.send({ embeds: [announceEmbed], components: [row] });
-            await interaction.reply({ content: 'Tournament finalized and announced!', ephemeral: true });
+        } else {
+            console.log('Unhandled interaction:', interaction.customId);
+            await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
         }
     }
 };
