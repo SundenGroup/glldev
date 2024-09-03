@@ -68,7 +68,9 @@ module.exports = {
         const teamSize = tournament.game.teamSize || 1;
         console.log('Team size:', teamSize);
 
-        for (let i = 1; i <= teamSize; i++) {
+        // Limit the number of player inputs to 5 (Discord's maximum)
+        const playerInputs = Math.min(teamSize, 5);
+        for (let i = 1; i <= playerInputs; i++) {
             const playerInput = new TextInputBuilder()
                 .setCustomId(`player_${i}`)
                 .setLabel(`Player ${i} Name`)
@@ -89,5 +91,66 @@ module.exports = {
         await interaction.showModal(modal);
     },
 
-    // ... rest of the file remains the same
+    async handleSignupSubmit(interaction) {
+        const tournament = tournaments.get(interaction.guildId);
+        if (!tournament) {
+            console.log('No active tournament found for guild:', interaction.guildId);
+            await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+            return;
+        }
+
+        console.log('Tournament found:', tournament);
+
+        const teamName = interaction.fields.getTextInputValue('team_name');
+        const players = [];
+        const teamSize = Math.min(tournament.game.teamSize || 1, 5);
+        for (let i = 1; i <= teamSize; i++) {
+            players.push(interaction.fields.getTextInputValue(`player_${i}`));
+        }
+
+        let geoGuessrProfile = '';
+        if (tournament.game.name === 'GeoGuessr') {
+            geoGuessrProfile = interaction.fields.getTextInputValue('geoguessr_profile');
+        }
+
+        console.log('Signup data:', { teamName, players, geoGuessrProfile });
+
+        if (!tournament.participants) {
+            tournament.participants = [];
+        }
+        tournament.participants.push({ teamName, players, geoGuessrProfile });
+
+        const embed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle('Tournament Sign Up Successful')
+            .addFields(
+                { name: 'Team Name', value: teamName },
+                { name: 'Players', value: players.join(', ') },
+                { name: 'Current Teams', value: `${tournament.participants.length}/${tournament.maxTeams}` }
+            );
+
+        if (geoGuessrProfile) {
+            embed.addFields({ name: 'GeoGuessr Profile', value: geoGuessrProfile });
+            // Here you would add the code to fetch and display the GeoGuessr rating
+            // For now, we'll just add a placeholder
+            embed.addFields({ name: 'GeoGuessr Rating', value: 'Rating will be fetched' });
+        }
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+
+        // Update the announcement message with the new participant count
+        const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
+        if (announcementChannel) {
+            const messages = await announcementChannel.messages.fetch({ limit: 1 });
+            const lastMessage = messages.first();
+            if (lastMessage && lastMessage.embeds.length > 0) {
+                const updatedEmbed = EmbedBuilder.from(lastMessage.embeds[0])
+                    .setFields(
+                        ...lastMessage.embeds[0].fields.filter(field => field.name !== 'Signed Up'),
+                        { name: 'Signed Up', value: `${tournament.participants.length}/${tournament.maxTeams}` }
+                    );
+                await lastMessage.edit({ embeds: [updatedEmbed] });
+            }
+        }
+    }
 };
