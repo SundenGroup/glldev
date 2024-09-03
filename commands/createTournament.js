@@ -14,12 +14,14 @@ const tournaments = new Map();
 
 class Tournament {
     constructor(title, description, dateTime, maxTeams, game) {
+        this.id = Date.now().toString();
         this.title = title;
         this.description = description;
         this.dateTime = dateTime;
         this.maxTeams = maxTeams;
         this.game = game;
         this.participants = [];
+        this.isFinalized = false;
     }
 }
 
@@ -63,7 +65,7 @@ module.exports = {
             if (interaction.isButton()) {
                 if (interaction.customId.startsWith('create_tournament_game_')) {
                     await this.handleGameSelection(interaction);
-                } else if (interaction.customId === 'create_tournament_finalize') {
+                } else if (interaction.customId.startsWith('create_tournament_finalize_')) {
                     await this.finalizeTournament(interaction);
                 }
             } else if (interaction.isModalSubmit() && interaction.customId === 'create_tournament_details_modal') {
@@ -180,7 +182,7 @@ module.exports = {
                 );
 
             const finalizeButton = new ButtonBuilder()
-                .setCustomId('create_tournament_finalize')
+                .setCustomId(`create_tournament_finalize_${tournament.id}`)
                 .setLabel('Finalize Tournament')
                 .setStyle(ButtonStyle.Success);
 
@@ -210,6 +212,11 @@ module.exports = {
                 return;
             }
 
+            if (tournament.isFinalized) {
+                await interaction.reply({ content: 'This tournament has already been finalized.', ephemeral: true });
+                return;
+            }
+
             const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
             if (!announcementChannel) {
                 await interaction.reply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', ephemeral: true });
@@ -217,17 +224,17 @@ module.exports = {
             }
 
             const signupButton = new ButtonBuilder()
-                .setCustomId(`signup_${interaction.guildId}`)
+                .setCustomId(`signup_${tournament.id}`)
                 .setLabel('Sign Up')
                 .setStyle(ButtonStyle.Success);
 
             const seedButton = new ButtonBuilder()
-                .setCustomId(`seed_${interaction.guildId}`)
+                .setCustomId(`seed_${tournament.id}`)
                 .setLabel('Seed Tournament')
                 .setStyle(ButtonStyle.Primary);
 
             const startButton = new ButtonBuilder()
-                .setCustomId(`start_${interaction.guildId}`)
+                .setCustomId(`start_${tournament.id}`)
                 .setLabel('Start Tournament')
                 .setStyle(ButtonStyle.Primary);
 
@@ -250,8 +257,7 @@ module.exports = {
                 components: [playerRow, adminRow]
             });
             
-            // Remove the tournament from the Map after announcing
-            tournaments.delete(interaction.guildId);
+            tournament.isFinalized = true;
 
             await interaction.update({ content: 'Tournament finalized and announced!', components: [], embeds: [] });
         } catch (error) {
