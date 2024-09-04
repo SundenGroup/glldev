@@ -36,60 +36,35 @@ client.on('interactionCreate', async interaction => {
             if (!command) return;
 
             await command.execute(interaction);
-        } else if (interaction.isButton()) {
-            const [action, tournamentId] = interaction.customId.split('_');
-            
-            switch(action) {
-                case 'signup':
-                    const signupCommand = client.commands.get('signup');
-                    if (signupCommand) {
-                        await signupCommand.handleInteraction(interaction);
-                    }
-                    break;
-                case 'seed':
-                    if (interaction.member.permissions.has('ADMINISTRATOR')) {
-                        const seedCommand = client.commands.get('seed');
-                        if (seedCommand) {
-                            await seedCommand.execute(interaction, tournamentId);
-                        }
-                    } else {
-                        await interaction.reply({ content: 'Only administrators can seed the tournament.', ephemeral: true });
-                    }
-                    break;
-                case 'start':
-                    if (interaction.member.permissions.has('ADMINISTRATOR')) {
-                        const startCommand = client.commands.get('start');
-                        if (startCommand) {
-                            await startCommand.execute(interaction, tournamentId);
-                        }
-                    } else {
-                        await interaction.reply({ content: 'Only administrators can start the tournament.', ephemeral: true });
-                    }
-                    break;
-                default:
-                    const createTournamentCommand = client.commands.get('create_tournament');
-                    if (createTournamentCommand && typeof createTournamentCommand.handleInteraction === 'function') {
-                        await createTournamentCommand.handleInteraction(interaction);
-                    }
-                    break;
+        } else if (interaction.isButton() || interaction.isModalSubmit()) {
+            const [action] = interaction.customId.split('_');
+            let command;
+
+            if (action === 'create' || interaction.customId.startsWith('create_tournament')) {
+                command = client.commands.get('create_tournament');
+            } else if (['signup', 'seed', 'start'].includes(action)) {
+                command = client.commands.get(action);
             }
-        } else if (interaction.isModalSubmit()) {
-            if (interaction.customId.startsWith('signup_modal_')) {
-                const signupCommand = client.commands.get('signup');
-                if (signupCommand) {
-                    await signupCommand.handleSignupSubmit(interaction);
-                }
+            
+            if (command && typeof command.handleInteraction === 'function') {
+                await command.handleInteraction(interaction);
             } else {
-                const createTournamentCommand = client.commands.get('create_tournament');
-                if (createTournamentCommand && typeof createTournamentCommand.handleInteraction === 'function') {
-                    await createTournamentCommand.handleInteraction(interaction);
-                }
+                console.log(`No handler found for interaction: ${interaction.customId}`);
             }
         }
     } catch (error) {
         console.error('Error handling interaction:', error);
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true }).catch(console.error);
+        const errorMessage = 'There was an error while executing this command!';
+        try {
+            if (interaction.deferred) {
+                await interaction.editReply({ content: errorMessage, components: [] });
+            } else if (interaction.replied) {
+                await interaction.followUp({ content: errorMessage, ephemeral: true });
+            } else {
+                await interaction.reply({ content: errorMessage, ephemeral: true });
+            }
+        } catch (replyError) {
+            console.error('Error while replying to interaction:', replyError);
         }
     }
 });
