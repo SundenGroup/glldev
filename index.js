@@ -36,32 +36,27 @@ client.on('interactionCreate', async interaction => {
             if (!command) return;
 
             await command.execute(interaction);
-        } else if (interaction.isButton() || interaction.isModalSubmit()) {
-            const [action] = interaction.customId.split('_');
-            let command;
-
-            if (action === 'create' || interaction.customId.startsWith('create_tournament')) {
-                command = client.commands.get('create_tournament');
-            } else if (['signup', 'seed', 'start'].includes(action)) {
-                command = client.commands.get(action);
+        } else if (interaction.isModalSubmit()) {
+            if (interaction.customId === 'create_tournament_modal') {
+                const command = client.commands.get('create_tournament');
+                if (command && typeof command.handleInteraction === 'function') {
+                    await command.handleInteraction(interaction);
+                }
             }
-            
-            if (command && typeof command.handleInteraction === 'function') {
-                await command.handleInteraction(interaction);
-            } else {
-                console.log(`No handler found for interaction: ${interaction.customId}`);
+        } else if (interaction.isButton()) {
+            if (interaction.customId.startsWith('finalize_tournament_')) {
+                const command = client.commands.get('create_tournament');
+                if (command && typeof command.finalizeTournament === 'function') {
+                    await command.finalizeTournament(interaction);
+                }
             }
+            // Handle other button interactions here (signup, seed, start)
         }
     } catch (error) {
         console.error('Error handling interaction:', error);
-        const errorMessage = 'There was an error while executing this command!';
         try {
-            if (interaction.deferred) {
-                await interaction.editReply({ content: errorMessage, components: [] });
-            } else if (interaction.replied) {
-                await interaction.followUp({ content: errorMessage, ephemeral: true });
-            } else {
-                await interaction.reply({ content: errorMessage, ephemeral: true });
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
             }
         } catch (replyError) {
             console.error('Error while replying to interaction:', replyError);

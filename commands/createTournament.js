@@ -38,112 +38,68 @@ module.exports = {
             return;
         }
 
-        const gameButtons = Object.entries(GAME_PRESETS).map(([key, value]) => {
-            return new ButtonBuilder()
-                .setCustomId(`create_tournament_game_${key}`)
-                .setLabel(value.name)
-                .setStyle(ButtonStyle.Primary);
-        });
-
-        const rows = [];
-        for (let i = 0; i < gameButtons.length; i += 5) {
-            rows.push(new ActionRowBuilder().addComponents(gameButtons.slice(i, i + 5)));
-        }
-
-        await interaction.reply({
-            content: 'Select the game for your tournament:',
-            components: rows,
-            ephemeral: true
-        });
-    },
-
-    async handleInteraction(interaction) {
-        try {
-            await interaction.deferUpdate();
-
-            if (interaction.isButton()) {
-                if (interaction.customId.startsWith('create_tournament_game_')) {
-                    await this.handleGameSelection(interaction);
-                } else if (interaction.customId.startsWith('create_tournament_finalize_')) {
-                    await this.finalizeTournament(interaction);
-                }
-            } else if (interaction.isModalSubmit() && interaction.customId === 'create_tournament_details_modal') {
-                await this.handleTournamentCreation(interaction);
-            }
-        } catch (error) {
-            console.error('Error in create_tournament handleInteraction:', error);
-            await this.handleError(interaction, 'An error occurred while processing your request.');
-        }
-    },
-
-    async handleGameSelection(interaction) {
-        const gameKey = interaction.customId.split('_')[3];
-        const game = GAME_PRESETS[gameKey];
-
         const modal = new ModalBuilder()
-            .setCustomId('create_tournament_details_modal')
-            .setTitle('Tournament Details');
+            .setCustomId('create_tournament_modal')
+            .setTitle('Create Tournament');
+
+        const gameSelect = new TextInputBuilder()
+            .setCustomId('game')
+            .setLabel('Game')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('e.g., VALORANT, GEOGUESSR, PUBG, etc.')
+            .setRequired(true);
 
         const titleInput = new TextInputBuilder()
             .setCustomId('title')
-            .setLabel('Enter the tournament title')
+            .setLabel('Tournament Title')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
         const descriptionInput = new TextInputBuilder()
             .setCustomId('description')
-            .setLabel('Enter the tournament description')
+            .setLabel('Tournament Description')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true);
 
-        const dateInput = new TextInputBuilder()
-            .setCustomId('date')
-            .setLabel('Enter the date (YYYY-MM-DD)')
+        const dateTimeInput = new TextInputBuilder()
+            .setCustomId('dateTime')
+            .setLabel('Date and Time (YYYY-MM-DD HH:MM)')
             .setStyle(TextInputStyle.Short)
-            .setPlaceholder('e.g., 2023-12-31')
-            .setRequired(true);
-
-        const timeInput = new TextInputBuilder()
-            .setCustomId('time')
-            .setLabel('Enter the time (HH:MM)')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('e.g., 14:30')
+            .setPlaceholder('e.g., 2023-12-31 14:30')
             .setRequired(true);
 
         const maxTeamsInput = new TextInputBuilder()
-            .setCustomId('max_teams')
-            .setLabel('Enter the maximum number of teams')
+            .setCustomId('maxTeams')
+            .setLabel('Maximum Number of Teams')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
         modal.addComponents(
+            new ActionRowBuilder().addComponents(gameSelect),
             new ActionRowBuilder().addComponents(titleInput),
             new ActionRowBuilder().addComponents(descriptionInput),
-            new ActionRowBuilder().addComponents(dateInput),
-            new ActionRowBuilder().addComponents(timeInput),
+            new ActionRowBuilder().addComponents(dateTimeInput),
             new ActionRowBuilder().addComponents(maxTeamsInput)
         );
-
-        tournaments.set(interaction.guildId, { game: game });
 
         await interaction.showModal(modal);
     },
 
-    async handleTournamentCreation(interaction) {
+    async handleInteraction(interaction) {
+        if (!interaction.isModalSubmit()) return;
+
+        const game = interaction.fields.getTextInputValue('game').toUpperCase();
         const title = interaction.fields.getTextInputValue('title');
         const description = interaction.fields.getTextInputValue('description');
-        const date = interaction.fields.getTextInputValue('date');
-        const time = interaction.fields.getTextInputValue('time');
-        const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
-        const dateTime = new Date(`${date}T${time}:00`);
+        const dateTime = new Date(interaction.fields.getTextInputValue('dateTime'));
+        const maxTeams = parseInt(interaction.fields.getTextInputValue('maxTeams'));
 
-        const tournamentData = tournaments.get(interaction.guildId);
-        if (!tournamentData || !tournamentData.game) {
-            await interaction.editReply({ content: 'An error occurred: Game not found. Please try creating the tournament again.', components: [] });
+        if (!GAME_PRESETS[game]) {
+            await interaction.reply({ content: 'Invalid game selected. Please try again.', ephemeral: true });
             return;
         }
 
-        const tournament = new Tournament(title, description, dateTime, maxTeams, tournamentData.game);
+        const tournament = new Tournament(title, description, dateTime, maxTeams, GAME_PRESETS[game]);
         tournaments.set(interaction.guildId, tournament);
 
         const embed = new EmbedBuilder()
@@ -158,37 +114,37 @@ module.exports = {
             );
 
         const finalizeButton = new ButtonBuilder()
-            .setCustomId(`create_tournament_finalize_${tournament.id}`)
+            .setCustomId(`finalize_tournament_${tournament.id}`)
             .setLabel('Finalize Tournament')
             .setStyle(ButtonStyle.Success);
 
-        const row = new ActionRowBuilder()
-            .addComponents(finalizeButton);
+        const row = new ActionRowBuilder().addComponents(finalizeButton);
 
-        await interaction.editReply({ 
+        await interaction.reply({ 
             content: 'Tournament created successfully! Click "Finalize Tournament" to announce it.', 
             embeds: [embed], 
-            components: [row]
+            components: [row],
+            ephemeral: true
         });
     },
 
     async finalizeTournament(interaction) {
-        const tournamentId = interaction.customId.split('_')[3];
+        const tournamentId = interaction.customId.split('_')[2];
         const tournament = tournaments.get(interaction.guildId);
 
         if (!tournament || tournament.id !== tournamentId) {
-            await interaction.editReply({ content: 'No active tournament found.', components: [] });
+            await interaction.update({ content: 'No active tournament found.', components: [] });
             return;
         }
 
         if (tournament.isFinalized) {
-            await interaction.editReply({ content: 'This tournament has already been finalized.', components: [] });
+            await interaction.update({ content: 'This tournament has already been finalized.', components: [] });
             return;
         }
 
         const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
         if (!announcementChannel) {
-            await interaction.editReply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', components: [] });
+            await interaction.update({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', components: [] });
             return;
         }
 
@@ -228,20 +184,6 @@ module.exports = {
         
         tournament.isFinalized = true;
 
-        await interaction.editReply({ content: 'Tournament finalized and announced!', components: [], embeds: [] });
-    },
-
-    async handleError(interaction, errorMessage) {
-        try {
-            if (interaction.deferred) {
-                await interaction.editReply({ content: errorMessage, components: [] });
-            } else if (interaction.replied) {
-                await interaction.followUp({ content: errorMessage, ephemeral: true });
-            } else {
-                await interaction.reply({ content: errorMessage, ephemeral: true });
-            }
-        } catch (error) {
-            console.error('Error in handleError:', error);
-        }
+        await interaction.update({ content: 'Tournament finalized and announced!', components: [], embeds: [] });
     }
 };
