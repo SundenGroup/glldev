@@ -173,23 +173,25 @@ module.exports = {
         });
     },
 
-    async finalizeTournament(interaction) {
+async finalizeTournament(interaction) {
+    console.log('Finalizing tournament');
+    try {
         const tournamentId = interaction.customId.split('_')[3];
         const tournament = tournaments.get(interaction.guildId);
 
         if (!tournament || tournament.id !== tournamentId) {
-            await interaction.update({ content: 'No active tournament found.', components: [] });
+            await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
             return;
         }
 
         if (tournament.isFinalized) {
-            await interaction.update({ content: 'This tournament has already been finalized.', components: [] });
+            await interaction.reply({ content: 'This tournament has already been finalized.', ephemeral: true });
             return;
         }
 
         const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
         if (!announcementChannel) {
-            await interaction.update({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', components: [] });
+            await interaction.reply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', ephemeral: true });
             return;
         }
 
@@ -229,6 +231,12 @@ module.exports = {
         
         tournament.isFinalized = true;
 
-        await interaction.update({ content: 'Tournament finalized and announced!', components: [], embeds: [] });
+        // Use reply instead of update
+        await interaction.reply({ content: 'Tournament finalized and announced!', ephemeral: true });
+    } catch (error) {
+        console.error('Error in finalizeTournament:', error);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: 'An error occurred while finalizing the tournament. Please try again.', ephemeral: true });
+        }
     }
-};
+}

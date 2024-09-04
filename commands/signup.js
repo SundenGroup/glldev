@@ -26,28 +26,28 @@ module.exports = {
     },
 
     async handleInteraction(interaction) {
-        console.log(`Handling interaction: ${interaction.customId}`);
-        try {
-            const [action, tournamentId] = interaction.customId.split('_');
-            if (action === 'signup') {
-                const tournament = tournaments.get(interaction.guildId);
-                if (!tournament || tournament.id !== tournamentId) {
-                    console.log('No active tournament found for ID:', tournamentId);
-                    await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
-                    return;
-                }
-                await this.showSignupModal(interaction, tournament);
-            } else {
-                console.log('Unhandled interaction:', interaction.customId);
-                await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
+    console.log(`Handling interaction: ${interaction.customId}`);
+    try {
+        const [action, tournamentId] = interaction.customId.split('_');
+        if (action === 'signup') {
+            const tournament = Array.from(tournaments.values()).find(t => t.id === tournamentId);
+            if (!tournament) {
+                console.log('No active tournament found for ID:', tournamentId);
+                await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+                return;
             }
-        } catch (error) {
-            console.error('Error in signup handleInteraction:', error);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: `An error occurred while processing your request.`, ephemeral: true });
-            }
+            await this.showSignupModal(interaction, tournament);
+        } else {
+            console.log('Unhandled interaction:', interaction.customId);
+            await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
         }
-    },
+    } catch (error) {
+        console.error('Error in signup handleInteraction:', error);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: `An error occurred while processing your request.`, ephemeral: true });
+        }
+    }
+}
 
     async showSignupModal(interaction, tournament) {
         try {

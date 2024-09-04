@@ -37,7 +37,7 @@ client.on('interactionCreate', async interaction => {
 
             await command.execute(interaction);
         } else if (interaction.isButton()) {
-            const [action, tournamentId] = interaction.customId.split('_');
+            const [action] = interaction.customId.split('_');
             
             switch(action) {
                 case 'signup':
@@ -50,7 +50,7 @@ client.on('interactionCreate', async interaction => {
                     if (interaction.member.permissions.has('ADMINISTRATOR')) {
                         const seedCommand = client.commands.get('seed');
                         if (seedCommand) {
-                            await seedCommand.execute(interaction, tournamentId);
+                            await seedCommand.execute(interaction);
                         }
                     } else {
                         await interaction.reply({ content: 'Only administrators can seed the tournament.', ephemeral: true });
@@ -60,17 +60,20 @@ client.on('interactionCreate', async interaction => {
                     if (interaction.member.permissions.has('ADMINISTRATOR')) {
                         const startCommand = client.commands.get('start');
                         if (startCommand) {
-                            await startCommand.execute(interaction, tournamentId);
+                            await startCommand.execute(interaction);
                         }
                     } else {
                         await interaction.reply({ content: 'Only administrators can start the tournament.', ephemeral: true });
                     }
                     break;
-                default:
+                case 'create':
                     const createTournamentCommand = client.commands.get('create_tournament');
                     if (createTournamentCommand && typeof createTournamentCommand.handleInteraction === 'function') {
                         await createTournamentCommand.handleInteraction(interaction);
                     }
+                    break;
+                default:
+                    console.log(`Unhandled button interaction: ${interaction.customId}`);
                     break;
             }
         } else if (interaction.isModalSubmit()) {
