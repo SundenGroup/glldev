@@ -38,7 +38,13 @@ client.on('interactionCreate', async interaction => {
             await command.execute(interaction);
         } else if (interaction.isButton() || interaction.isModalSubmit()) {
             const [action] = interaction.customId.split('_');
-            const command = client.commands.get(action) || client.commands.get('create_tournament');
+            let command;
+
+            if (action === 'create' || action === 'signup' || action === 'seed' || action === 'start') {
+                command = client.commands.get(action);
+            } else {
+                command = client.commands.get('create_tournament');
+            }
             
             if (command && typeof command.handleInteraction === 'function') {
                 await command.handleInteraction(interaction);
