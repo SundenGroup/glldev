@@ -36,52 +36,23 @@ client.on('interactionCreate', async interaction => {
             if (!command) return;
 
             await command.execute(interaction);
-        } else if (interaction.isButton()) {
-            const [action, tournamentId] = interaction.customId.split('_');
+        } else if (interaction.isButton() || interaction.isModalSubmit()) {
+            const [action] = interaction.customId.split('_');
+            const command = client.commands.get(action) || client.commands.get('create_tournament');
             
-            switch(action) {
-                case 'signup':
-                    const signupCommand = client.commands.get('signup');
-                    if (signupCommand && typeof signupCommand.handleInteraction === 'function') {
-                        await signupCommand.handleInteraction(interaction);
-                    }
-                    break;
-                case 'seed':
-                    const seedCommand = client.commands.get('seed');
-                    if (seedCommand) {
-                        await seedCommand.execute(interaction, tournamentId);
-                    }
-                    break;
-                case 'start':
-                    const startCommand = client.commands.get('start');
-                    if (startCommand) {
-                        await startCommand.execute(interaction, tournamentId);
-                    }
-                    break;
-                default:
-                    const createTournamentCommand = client.commands.get('create_tournament');
-                    if (createTournamentCommand && typeof createTournamentCommand.handleInteraction === 'function') {
-                        await createTournamentCommand.handleInteraction(interaction);
-                    }
-                    break;
-            }
-        } else if (interaction.isModalSubmit()) {
-            if (interaction.customId.startsWith('signup_modal_')) {
-                const signupCommand = client.commands.get('signup');
-                if (signupCommand && typeof signupCommand.handleSignupSubmit === 'function') {
-                    await signupCommand.handleSignupSubmit(interaction);
-                }
+            if (command && typeof command.handleInteraction === 'function') {
+                await command.handleInteraction(interaction);
             } else {
-                const createTournamentCommand = client.commands.get('create_tournament');
-                if (createTournamentCommand && typeof createTournamentCommand.handleInteraction === 'function') {
-                    await createTournamentCommand.handleInteraction(interaction);
-                }
+                console.log(`No handler found for interaction: ${interaction.customId}`);
             }
         }
     } catch (error) {
         console.error('Error handling interaction:', error);
+        const errorMessage = 'There was an error while executing this command!';
         if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true }).catch(console.error);
+            await interaction.reply({ content: errorMessage, ephemeral: true }).catch(console.error);
+        } else {
+            await interaction.followUp({ content: errorMessage, ephemeral: true }).catch(console.error);
         }
     }
 });
