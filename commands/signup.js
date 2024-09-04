@@ -47,7 +47,7 @@ module.exports = {
             await interaction.reply({ content: `An error occurred while processing your request.`, ephemeral: true });
         }
     }
-}
+},
 
     async showSignupModal(interaction, tournament) {
         try {
