@@ -59,8 +59,6 @@ module.exports = {
 
     async handleInteraction(interaction) {
         try {
-            await interaction.deferUpdate();
-
             if (interaction.isButton()) {
                 if (interaction.customId.startsWith('create_tournament_game_')) {
                     await this.handleGameSelection(interaction);
@@ -77,6 +75,7 @@ module.exports = {
     },
 
     async handleGameSelection(interaction) {
+        await interaction.deferUpdate();
         const gameKey = interaction.customId.split('_')[3];
         const game = GAME_PRESETS[gameKey];
 

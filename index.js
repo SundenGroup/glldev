@@ -40,10 +40,10 @@ client.on('interactionCreate', async interaction => {
             const [action] = interaction.customId.split('_');
             let command;
 
-            if (action === 'create' || action === 'signup' || action === 'seed' || action === 'start') {
-                command = client.commands.get(action);
-            } else {
+            if (action === 'create' || interaction.customId.startsWith('create_tournament')) {
                 command = client.commands.get('create_tournament');
+            } else if (action === 'signup' || action === 'seed' || action === 'start') {
+                command = client.commands.get(action);
             }
             
             if (command && typeof command.handleInteraction === 'function') {
