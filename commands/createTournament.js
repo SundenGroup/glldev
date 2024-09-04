@@ -75,7 +75,6 @@ module.exports = {
     },
 
     async handleGameSelection(interaction) {
-        await interaction.deferUpdate();
         const gameKey = interaction.customId.split('_')[3];
         const game = GAME_PRESETS[gameKey];
 
@@ -138,7 +137,7 @@ module.exports = {
 
         const tournamentData = tournaments.get(interaction.guildId);
         if (!tournamentData || !tournamentData.game) {
-            await interaction.editReply({ content: 'An error occurred: Game not found. Please try creating the tournament again.', components: [] });
+            await interaction.reply({ content: 'An error occurred: Game not found. Please try creating the tournament again.', ephemeral: true });
             return;
         }
 
@@ -164,10 +163,11 @@ module.exports = {
         const row = new ActionRowBuilder()
             .addComponents(finalizeButton);
 
-        await interaction.editReply({ 
+        await interaction.reply({ 
             content: 'Tournament created successfully! Click "Finalize Tournament" to announce it.', 
             embeds: [embed], 
-            components: [row]
+            components: [row],
+            ephemeral: true
         });
     },
 
@@ -176,18 +176,18 @@ module.exports = {
         const tournament = tournaments.get(interaction.guildId);
 
         if (!tournament || tournament.id !== tournamentId) {
-            await interaction.editReply({ content: 'No active tournament found.', components: [] });
+            await interaction.update({ content: 'No active tournament found.', components: [] });
             return;
         }
 
         if (tournament.isFinalized) {
-            await interaction.editReply({ content: 'This tournament has already been finalized.', components: [] });
+            await interaction.update({ content: 'This tournament has already been finalized.', components: [] });
             return;
         }
 
         const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
         if (!announcementChannel) {
-            await interaction.editReply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', components: [] });
+            await interaction.update({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', components: [] });
             return;
         }
 
@@ -227,14 +227,12 @@ module.exports = {
         
         tournament.isFinalized = true;
 
-        await interaction.editReply({ content: 'Tournament finalized and announced!', components: [], embeds: [] });
+        await interaction.update({ content: 'Tournament finalized and announced!', components: [], embeds: [] });
     },
 
     async handleError(interaction, errorMessage) {
         try {
-            if (interaction.deferred) {
-                await interaction.editReply({ content: errorMessage, components: [] });
-            } else if (interaction.replied) {
+            if (interaction.replied || interaction.deferred) {
                 await interaction.followUp({ content: errorMessage, ephemeral: true });
             } else {
                 await interaction.reply({ content: errorMessage, ephemeral: true });

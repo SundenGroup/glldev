@@ -42,7 +42,7 @@ client.on('interactionCreate', async interaction => {
 
             if (action === 'create' || interaction.customId.startsWith('create_tournament')) {
                 command = client.commands.get('create_tournament');
-            } else if (action === 'signup' || action === 'seed' || action === 'start') {
+            } else if (['signup', 'seed', 'start'].includes(action)) {
                 command = client.commands.get(action);
             }
             
@@ -55,10 +55,14 @@ client.on('interactionCreate', async interaction => {
     } catch (error) {
         console.error('Error handling interaction:', error);
         const errorMessage = 'There was an error while executing this command!';
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: errorMessage, ephemeral: true }).catch(console.error);
-        } else {
-            await interaction.followUp({ content: errorMessage, ephemeral: true }).catch(console.error);
+        try {
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({ content: errorMessage, ephemeral: true });
+            } else {
+                await interaction.reply({ content: errorMessage, ephemeral: true });
+            }
+        } catch (replyError) {
+            console.error('Error while replying to interaction:', replyError);
         }
     }
 });
