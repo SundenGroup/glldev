@@ -30,8 +30,8 @@ module.exports = {
         try {
             const [action, tournamentId] = interaction.customId.split('_');
             if (action === 'signup') {
-                const tournament = Array.from(tournaments.values()).find(t => t.id === tournamentId);
-                if (!tournament) {
+                const tournament = tournaments.get(interaction.guildId);
+                if (!tournament || tournament.id !== tournamentId) {
                     console.log('No active tournament found for ID:', tournamentId);
                     await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
                     return;
@@ -89,8 +89,8 @@ module.exports = {
 
     async handleSignupSubmit(interaction) {
         const [, , tournamentId] = interaction.customId.split('_');
-        const tournament = Array.from(tournaments.values()).find(t => t.id === tournamentId);
-        if (!tournament) {
+        const tournament = tournaments.get(interaction.guildId);
+        if (!tournament || tournament.id !== tournamentId) {
             console.log('No active tournament found for ID:', tournamentId);
             await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
             return;
