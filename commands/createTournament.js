@@ -130,12 +130,16 @@ module.exports = {
             await interaction.showModal(modal);
         } catch (error) {
             console.error('Error in handleGameSelection:', error);
-            await interaction.reply({ content: 'An error occurred while processing your game selection. Please try again.', ephemeral: true }).catch(console.error);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: 'An error occurred while processing your game selection. Please try again.', ephemeral: true }).catch(console.error);
+            }
         }
     },
 
     async handleTournamentCreation(interaction) {
         try {
+            await interaction.deferReply({ ephemeral: true });
+
             const title = interaction.fields.getTextInputValue('title');
             const description = interaction.fields.getTextInputValue('description');
             const date = interaction.fields.getTextInputValue('date');
@@ -145,7 +149,7 @@ module.exports = {
 
             const tournamentData = tournaments.get(interaction.guildId);
             if (!tournamentData || !tournamentData.game) {
-                await interaction.reply({ content: 'An error occurred: Game not found. Please try creating the tournament again.', ephemeral: true });
+                await interaction.editReply({ content: 'An error occurred: Game not found. Please try creating the tournament again.' });
                 return;
             }
 
@@ -171,35 +175,40 @@ module.exports = {
             const row = new ActionRowBuilder()
                 .addComponents(finalizeButton);
 
-            await interaction.reply({ 
+            await interaction.editReply({ 
                 content: 'Tournament created successfully! Click "Finalize Tournament" to announce it.', 
                 embeds: [embed], 
                 components: [row],
-                ephemeral: true
             });
         } catch (error) {
             console.error('Error in handleTournamentCreation:', error);
-            await interaction.reply({ content: 'An error occurred while creating the tournament. Please try again.', ephemeral: true });
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: 'An error occurred while creating the tournament. Please try again.', ephemeral: true });
+            } else {
+                await interaction.editReply({ content: 'An error occurred while creating the tournament. Please try again.' });
+            }
         }
     },
 
     async finalizeTournament(interaction) {
         console.log('Finalizing tournament');
         try {
+            await interaction.deferUpdate();
+
             const tournament = Array.from(tournaments.values()).find(t => t.id === interaction.customId.split('_')[2]);
             if (!tournament) {
-                await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+                await interaction.editReply({ content: 'No active tournament found.', components: [] });
                 return;
             }
 
             if (tournament.isFinalized) {
-                await interaction.reply({ content: 'This tournament has already been finalized.', ephemeral: true });
+                await interaction.editReply({ content: 'This tournament has already been finalized.', components: [] });
                 return;
             }
 
             const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
             if (!announcementChannel) {
-                await interaction.reply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', ephemeral: true });
+                await interaction.editReply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', components: [] });
                 return;
             }
 
@@ -239,10 +248,14 @@ module.exports = {
             
             tournament.isFinalized = true;
 
-            await interaction.update({ content: 'Tournament finalized and announced!', components: [], embeds: [] });
+            await interaction.editReply({ content: 'Tournament finalized and announced!', components: [], embeds: [] });
         } catch (error) {
             console.error('Error in finalizeTournament:', error);
-            await interaction.reply({ content: 'An error occurred while finalizing the tournament. Please try again.', ephemeral: true });
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: 'An error occurred while finalizing the tournament. Please try again.', ephemeral: true });
+            } else {
+                await interaction.editReply({ content: 'An error occurred while finalizing the tournament. Please try again.', components: [] });
+            }
         }
     }
 };
