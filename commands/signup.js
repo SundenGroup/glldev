@@ -98,60 +98,53 @@ module.exports = {
 
         console.log('Tournament found:', tournament);
 
-        try {
-            const teamName = interaction.fields.getTextInputValue('team_name');
-            const players = [];
-            const teamSize = Math.min(tournament.game.teamSize || 1, 5);
-            for (let i = 1; i <= teamSize; i++) {
-                players.push(interaction.fields.getTextInputValue(`player_${i}`));
-            }
+        const teamName = interaction.fields.getTextInputValue('team_name');
+        const players = [];
+        const teamSize = Math.min(tournament.game.teamSize || 1, 5);
+        for (let i = 1; i <= teamSize; i++) {
+            players.push(interaction.fields.getTextInputValue(`player_${i}`));
+        }
 
-            let geoGuessrProfile = '';
-            if (tournament.game.name === 'GeoGuessr') {
-                geoGuessrProfile = interaction.fields.getTextInputValue('geoguessr_profile');
-            }
+        let geoGuessrProfile = '';
+        if (tournament.game.name === 'GeoGuessr') {
+            geoGuessrProfile = interaction.fields.getTextInputValue('geoguessr_profile');
+        }
 
-            console.log('Signup data:', { teamName, players, geoGuessrProfile });
+        console.log('Signup data:', { teamName, players, geoGuessrProfile });
 
-            if (!tournament.participants) {
-                tournament.participants = [];
-            }
-            tournament.participants.push({ teamName, players, geoGuessrProfile });
+        if (!tournament.participants) {
+            tournament.participants = [];
+        }
+        tournament.participants.push({ teamName, players, geoGuessrProfile });
 
-            const embed = new EmbedBuilder()
-                .setColor('#00FF00')
-                .setTitle('Tournament Sign Up Successful')
-                .addFields(
-                    { name: 'Team Name', value: teamName },
-                    { name: 'Players', value: players.join(', ') },
-                    { name: 'Current Teams', value: `${tournament.participants.length}/${tournament.maxTeams}` }
-                );
+        const embed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle('Tournament Sign Up Successful')
+            .addFields(
+                { name: 'Team Name', value: teamName },
+                { name: 'Players', value: players.join(', ') },
+                { name: 'Current Teams', value: `${tournament.participants.length}/${tournament.maxTeams}` }
+            );
 
-            if (geoGuessrProfile) {
-                embed.addFields({ name: 'GeoGuessr Profile', value: geoGuessrProfile });
-                embed.addFields({ name: 'GeoGuessr Rating', value: 'Rating will be fetched' });
-            }
+        if (geoGuessrProfile) {
+            embed.addFields({ name: 'GeoGuessr Profile', value: geoGuessrProfile });
+            embed.addFields({ name: 'GeoGuessr Rating', value: 'Rating will be fetched' });
+        }
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
 
-            // Update the announcement message with the new participant count
-            const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
-            if (announcementChannel) {
-                const messages = await announcementChannel.messages.fetch({ limit: 10 });
-                const lastMessage = messages.find(msg => msg.embeds.length > 0 && msg.embeds[0].title === tournament.title);
-                if (lastMessage) {
-                    const updatedEmbed = EmbedBuilder.from(lastMessage.embeds[0])
-                        .setFields(
-                            ...lastMessage.embeds[0].fields.filter(field => field.name !== 'Signed Up'),
-                            { name: 'Signed Up', value: `${tournament.participants.length}/${tournament.maxTeams}` }
-                        );
-                    await lastMessage.edit({ embeds: [updatedEmbed] });
-                }
-            }
-        } catch (error) {
-            console.error('Error in handleSignupSubmit:', error);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'An error occurred while processing your signup. Please try again.', ephemeral: true });
+        // Update the announcement message with the new participant count
+        const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
+        if (announcementChannel) {
+            const messages = await announcementChannel.messages.fetch({ limit: 10 });
+            const lastMessage = messages.find(msg => msg.embeds.length > 0 && msg.embeds[0].title === tournament.title);
+            if (lastMessage) {
+                const updatedEmbed = EmbedBuilder.from(lastMessage.embeds[0])
+                    .setFields(
+                        ...lastMessage.embeds[0].fields.filter(field => field.name !== 'Signed Up'),
+                        { name: 'Signed Up', value: `${tournament.participants.length}/${tournament.maxTeams}` }
+                    );
+                await lastMessage.edit({ embeds: [updatedEmbed] });
             }
         }
     }
