@@ -183,70 +183,67 @@ module.exports = {
     },
 
     async finalizeTournament(interaction) {
-        console.log('Finalizing tournament');
-        try {
-            await interaction.deferUpdate();
-
-            const tournament = Array.from(tournaments.values()).find(t => t.id === interaction.customId.split('_')[3]);
-            if (!tournament) {
-                await interaction.editReply({ content: 'No active tournament found.', components: [] });
-                return;
-            }
-
-            if (tournament.isFinalized) {
-                await interaction.editReply({ content: 'This tournament has already been finalized.', components: [] });
-                return;
-            }
-
-            const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
-            if (!announcementChannel) {
-                await interaction.editReply({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', components: [] });
-                return;
-            }
-
-            const signupButton = new ButtonBuilder()
-                .setCustomId(`signup_${tournament.id}`)
-                .setLabel('Sign Up')
-                .setStyle(ButtonStyle.Success);
-
-            const seedButton = new ButtonBuilder()
-                .setCustomId(`seed_${tournament.id}`)
-                .setLabel('Seed Tournament')
-                .setStyle(ButtonStyle.Primary);
-
-            const startButton = new ButtonBuilder()
-                .setCustomId(`start_${tournament.id}`)
-                .setLabel('Start Tournament')
-                .setStyle(ButtonStyle.Primary);
-
-            const playerRow = new ActionRowBuilder().addComponents(signupButton);
-            const adminRow = new ActionRowBuilder().addComponents(seedButton, startButton);
-
-            const announceEmbed = new EmbedBuilder()
-                .setColor('#00FF00')
-                .setTitle(tournament.title)
-                .setDescription(tournament.description)
-                .addFields(
-                    { name: 'Date and Time', value: tournament.dateTime.toISOString() },
-                    { name: 'Game', value: tournament.game.name },
-                    { name: 'Max Teams', value: tournament.maxTeams.toString() },
-                    { name: 'Signed Up', value: '0/' + tournament.maxTeams }
-                );
-
-            await announcementChannel.send({ 
-                embeds: [announceEmbed], 
-                components: [playerRow, adminRow]
-            });
-            
-            tournament.isFinalized = true;
-
-            await interaction.editReply({ content: 'Tournament finalized and announced!', components: [], embeds: [] });
-        } catch (error) {
-            console.error('Error in finalizeTournament:', error);
-            await this.handleError(interaction, 'An error occurred while finalizing the tournament. Please try again.');
+    console.log('Finalizing tournament');
+    try {
+        const tournament = Array.from(tournaments.values()).find(t => t.id === interaction.customId.split('_')[3]);
+        if (!tournament) {
+            await interaction.update({ content: 'No active tournament found.', components: [] });
+            return;
         }
-    },
 
+        if (tournament.isFinalized) {
+            await interaction.update({ content: 'This tournament has already been finalized.', components: [] });
+            return;
+        }
+
+        const announcementChannel = interaction.guild.channels.cache.find(channel => channel.name === 'tournament-announcements');
+        if (!announcementChannel) {
+            await interaction.update({ content: 'Tournament announcement channel not found. Please create a #tournament-announcements channel.', components: [] });
+            return;
+        }
+
+        const signupButton = new ButtonBuilder()
+            .setCustomId(`signup_${tournament.id}`)
+            .setLabel('Sign Up')
+            .setStyle(ButtonStyle.Success);
+
+        const seedButton = new ButtonBuilder()
+            .setCustomId(`seed_${tournament.id}`)
+            .setLabel('Seed Tournament')
+            .setStyle(ButtonStyle.Primary);
+
+        const startButton = new ButtonBuilder()
+            .setCustomId(`start_${tournament.id}`)
+            .setLabel('Start Tournament')
+            .setStyle(ButtonStyle.Primary);
+
+        const playerRow = new ActionRowBuilder().addComponents(signupButton);
+        const adminRow = new ActionRowBuilder().addComponents(seedButton, startButton);
+
+        const announceEmbed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle(tournament.title)
+            .setDescription(tournament.description)
+            .addFields(
+                { name: 'Date and Time', value: tournament.dateTime.toISOString() },
+                { name: 'Game', value: tournament.game.name },
+                { name: 'Max Teams', value: tournament.maxTeams.toString() },
+                { name: 'Signed Up', value: '0/' + tournament.maxTeams }
+            );
+
+        await announcementChannel.send({ 
+            embeds: [announceEmbed], 
+            components: [playerRow, adminRow]
+        });
+        
+        tournament.isFinalized = true;
+
+        await interaction.update({ content: 'Tournament finalized and announced!', components: [], embeds: [] });
+    } catch (error) {
+        console.error('Error in finalizeTournament:', error);
+        await interaction.update({ content: 'An error occurred while finalizing the tournament. Please try again.', components: [] });
+    }
+},
     async handleError(interaction, errorMessage) {
         try {
             if (interaction.deferred) {
