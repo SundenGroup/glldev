@@ -79,121 +79,115 @@ module.exports = {
     },
 
     async handleGameSelection(interaction) {
-        const gameKey = interaction.customId.split('_')[3];
-        const game = GAME_PRESETS[gameKey];
+    const gameKey = interaction.customId.split('_')[3];
+    const game = GAME_PRESETS[gameKey];
 
-        const modal = new ModalBuilder()
-            .setCustomId('create_tournament_details_modal')
-            .setTitle('Tournament Details');
+    const modal = new ModalBuilder()
+        .setCustomId('create_tournament_details_modal')
+        .setTitle('Tournament Details');
 
-        const titleInput = new TextInputBuilder()
-            .setCustomId('title')
-            .setLabel('Enter the tournament title')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+    const titleInput = new TextInputBuilder()
+        .setCustomId('title')
+        .setLabel('Enter the tournament title')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
 
-        const descriptionInput = new TextInputBuilder()
-            .setCustomId('description')
-            .setLabel('Enter the tournament description')
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true);
+    const descriptionInput = new TextInputBuilder()
+        .setCustomId('description')
+        .setLabel('Enter the tournament description')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
 
-        const dateInput = new TextInputBuilder()
-            .setCustomId('date')
-            .setLabel('Enter the date (YYYY-MM-DD)')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('e.g., 2023-12-31')
-            .setRequired(true);
+    const dateTimeInput = new TextInputBuilder()
+        .setCustomId('date_time')
+        .setLabel('Enter date and time (YYYY-MM-DD HH:MM)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g., 2023-12-31 14:30')
+        .setRequired(true);
 
-        const timeInput = new TextInputBuilder()
-            .setCustomId('time')
-            .setLabel('Enter the time (HH:MM)')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('e.g., 14:30')
-            .setRequired(true);
+    const maxTeamsInput = new TextInputBuilder()
+        .setCustomId('max_teams')
+        .setLabel('Enter the maximum number of teams')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
 
-        const maxTeamsInput = new TextInputBuilder()
-            .setCustomId('max_teams')
-            .setLabel('Enter the maximum number of teams')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+    const optionalInfoInput = new TextInputBuilder()
+        .setCustomId('optional_info')
+        .setLabel('Rules Link and Image URL (optional)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Rules: http://example.com/rules\nImage: http://example.com/image.jpg')
+        .setRequired(false);
 
-        const rulesInput = new TextInputBuilder()
-            .setCustomId('rules_link')
-            .setLabel('Rules Link (optional)')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false);
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(titleInput),
+        new ActionRowBuilder().addComponents(descriptionInput),
+        new ActionRowBuilder().addComponents(dateTimeInput),
+        new ActionRowBuilder().addComponents(maxTeamsInput),
+        new ActionRowBuilder().addComponents(optionalInfoInput)
+    );
 
-        const imageInput = new TextInputBuilder()
-            .setCustomId('image_url')
-            .setLabel('Tournament Image URL (optional)')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false);
+    tournaments.set(interaction.guildId, { game: game });
 
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(titleInput),
-            new ActionRowBuilder().addComponents(descriptionInput),
-            new ActionRowBuilder().addComponents(dateInput),
-            new ActionRowBuilder().addComponents(timeInput),
-            new ActionRowBuilder().addComponents(maxTeamsInput),
-            new ActionRowBuilder().addComponents(rulesInput),
-            new ActionRowBuilder().addComponents(imageInput)
-        );
-
-        tournaments.set(interaction.guildId, { game: game });
-
-        await interaction.showModal(modal);
-    },
+    await interaction.showModal(modal);
+},
 
     async handleTournamentCreation(interaction) {
-        const title = interaction.fields.getTextInputValue('title');
-        const description = interaction.fields.getTextInputValue('description');
-        const date = interaction.fields.getTextInputValue('date');
-        const time = interaction.fields.getTextInputValue('time');
-        const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
-        const rulesLink = interaction.fields.getTextInputValue('rules_link');
-        const imageUrl = interaction.fields.getTextInputValue('image_url');
-        const dateTime = new Date(`${date}T${time}:00`);
+    const title = interaction.fields.getTextInputValue('title');
+    const description = interaction.fields.getTextInputValue('description');
+    const dateTime = new Date(interaction.fields.getTextInputValue('date_time'));
+    const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
+    
+    const optionalInfo = interaction.fields.getTextInputValue('optional_info');
+    let rulesLink = '';
+    let imageUrl = '';
+    
+    if (optionalInfo) {
+        const rulesMatch = optionalInfo.match(/Rules:\s*(http[s]?:\/\/\S+)/i);
+        const imageMatch = optionalInfo.match(/Image:\s*(http[s]?:\/\/\S+)/i);
+        
+        if (rulesMatch) rulesLink = rulesMatch[1];
+        if (imageMatch) imageUrl = imageMatch[1];
+    }
 
-        const tournamentData = tournaments.get(interaction.guildId);
-        if (!tournamentData || !tournamentData.game) {
-            await interaction.reply({ content: 'An error occurred: Game not found. Please try creating the tournament again.', ephemeral: true });
-            return;
-        }
+    const tournamentData = tournaments.get(interaction.guildId);
+    if (!tournamentData || !tournamentData.game) {
+        await interaction.reply({ content: 'An error occurred: Game not found. Please try creating the tournament again.', ephemeral: true });
+        return;
+    }
 
-        const tournament = new Tournament(title, description, dateTime, maxTeams, tournamentData.game, rulesLink, imageUrl);
-        tournaments.set(interaction.guildId, tournament);
+    const tournament = new Tournament(title, description, dateTime, maxTeams, tournamentData.game, rulesLink, imageUrl);
+    tournaments.set(interaction.guildId, tournament);
 
-        const embed = new EmbedBuilder()
-            .setColor('#0099ff')
-            .setTitle('Tournament Created')
-            .addFields(
-                { name: 'Title', value: tournament.title },
-                { name: 'Description', value: tournament.description },
-                { name: 'Date and Time', value: tournament.dateTime.toISOString() },
-                { name: 'Max Teams', value: tournament.maxTeams.toString() },
-                { name: 'Game', value: tournament.game.name }
-            );
+    const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle('Tournament Created')
+        .addFields(
+            { name: 'Title', value: tournament.title },
+            { name: 'Description', value: tournament.description },
+            { name: 'Date and Time', value: tournament.dateTime.toISOString() },
+            { name: 'Max Teams', value: tournament.maxTeams.toString() },
+            { name: 'Game', value: tournament.game.name }
+        );
 
-        if (imageUrl) {
-            embed.setImage(imageUrl);
-        }
+    if (imageUrl) {
+        embed.setImage(imageUrl);
+    }
 
-        const finalizeButton = new ButtonBuilder()
-            .setCustomId(`create_tournament_finalize_${tournament.id}`)
-            .setLabel('Finalize Tournament')
-            .setStyle(ButtonStyle.Success);
+    const finalizeButton = new ButtonBuilder()
+        .setCustomId(`create_tournament_finalize_${tournament.id}`)
+        .setLabel('Finalize Tournament')
+        .setStyle(ButtonStyle.Success);
 
-        const row = new ActionRowBuilder()
-            .addComponents(finalizeButton);
+    const row = new ActionRowBuilder()
+        .addComponents(finalizeButton);
 
-        await interaction.reply({ 
-            content: 'Tournament created successfully! Click "Finalize Tournament" to announce it.', 
-            embeds: [embed], 
-            components: [row],
-            ephemeral: true
-        });
-    },
+    await interaction.reply({ 
+        content: 'Tournament created successfully! Click "Finalize Tournament" to announce it.', 
+        embeds: [embed], 
+        components: [row],
+        ephemeral: true
+    });
+},
 
     async finalizeTournament(interaction) {
         console.log('Finalizing tournament');
