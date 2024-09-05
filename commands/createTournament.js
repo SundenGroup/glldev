@@ -3,11 +3,11 @@ const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRow
 const GAME_PRESETS = {
     VALORANT: { name: "VALORANT", teamSize: 5, emojiId: "1281299007829971094" }, // Replace with actual Valorant emoji ID
     GEOGUESSR: { name: "GeoGuessr", teamSize: 1, emojiId: "1281313927245856798" }, // Replace with actual GeoGuessr emoji ID
-    PUBG: { name: "PUBG", teamSize: 4, emojiId: "1281299007829971096" }, // Replace with actual PUBG emoji ID
-    DEADLOCK: { name: "Deadlock", teamSize: 5, emojiId: "1281299007829971097" }, // Replace with actual Deadlock emoji ID
-    CS2: { name: "Counter-Strike 2", teamSize: 5, emojiId: "1281299007829971098" }, // Replace with actual CS2 emoji ID
-    SPLITGATE2: { name: "SplitGate 2", teamSize: 3, emojiId: "1281299007829971099" }, // Replace with actual SplitGate 2 emoji ID
-    OTHER: { name: "Other", teamSize: null, emojiId: "1281299007829971100" } // Replace with actual Other emoji ID
+    PUBG: { name: "PUBG", teamSize: 4, emojiId: "1281299007829971094" }, // Replace with actual PUBG emoji ID
+    DEADLOCK: { name: "Deadlock", teamSize: 5, emojiId: "1281299007829971094" }, // Replace with actual Deadlock emoji ID
+    CS2: { name: "Counter-Strike 2", teamSize: 5, emojiId: "1281299007829971094" }, // Replace with actual CS2 emoji ID
+    SPLITGATE2: { name: "SplitGate 2", teamSize: 3, emojiId: "1281299007829971094" }, // Replace with actual SplitGate 2 emoji ID
+    OTHER: { name: "Other", teamSize: null, emojiId: "1281299007829971094" } // Replace with actual Other emoji ID
 };
 
 const tournaments = new Map();
