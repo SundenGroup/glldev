@@ -13,13 +13,15 @@ const GAME_PRESETS = {
 const tournaments = new Map();
 
 class Tournament {
-    constructor(title, description, dateTime, maxTeams, game) {
+    constructor(title, description, dateTime, maxTeams, game, rulesLink, imageUrl) {
         this.id = Date.now().toString();
         this.title = title;
         this.description = description;
         this.dateTime = dateTime;
         this.maxTeams = maxTeams;
         this.game = game;
+        this.rulesLink = rulesLink;
+        this.imageUrl = imageUrl;
         this.participants = [];
         this.isFinalized = false;
     }
@@ -116,12 +118,26 @@ module.exports = {
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
+        const rulesInput = new TextInputBuilder()
+            .setCustomId('rules_link')
+            .setLabel('Rules Link (optional)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false);
+
+        const imageInput = new TextInputBuilder()
+            .setCustomId('image_url')
+            .setLabel('Tournament Image URL (optional)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false);
+
         modal.addComponents(
             new ActionRowBuilder().addComponents(titleInput),
             new ActionRowBuilder().addComponents(descriptionInput),
             new ActionRowBuilder().addComponents(dateInput),
             new ActionRowBuilder().addComponents(timeInput),
-            new ActionRowBuilder().addComponents(maxTeamsInput)
+            new ActionRowBuilder().addComponents(maxTeamsInput),
+            new ActionRowBuilder().addComponents(rulesInput),
+            new ActionRowBuilder().addComponents(imageInput)
         );
 
         tournaments.set(interaction.guildId, { game: game });
@@ -135,6 +151,8 @@ module.exports = {
         const date = interaction.fields.getTextInputValue('date');
         const time = interaction.fields.getTextInputValue('time');
         const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
+        const rulesLink = interaction.fields.getTextInputValue('rules_link');
+        const imageUrl = interaction.fields.getTextInputValue('image_url');
         const dateTime = new Date(`${date}T${time}:00`);
 
         const tournamentData = tournaments.get(interaction.guildId);
@@ -143,7 +161,7 @@ module.exports = {
             return;
         }
 
-        const tournament = new Tournament(title, description, dateTime, maxTeams, tournamentData.game);
+        const tournament = new Tournament(title, description, dateTime, maxTeams, tournamentData.game, rulesLink, imageUrl);
         tournaments.set(interaction.guildId, tournament);
 
         const embed = new EmbedBuilder()
@@ -156,6 +174,10 @@ module.exports = {
                 { name: 'Max Teams', value: tournament.maxTeams.toString() },
                 { name: 'Game', value: tournament.game.name }
             );
+
+        if (imageUrl) {
+            embed.setImage(imageUrl);
+        }
 
         const finalizeButton = new ButtonBuilder()
             .setCustomId(`create_tournament_finalize_${tournament.id}`)
@@ -224,9 +246,24 @@ module.exports = {
                     { name: 'Signed Up', value: '0/' + tournament.maxTeams }
                 );
 
+            if (tournament.imageUrl) {
+                announceEmbed.setImage(tournament.imageUrl);
+            }
+
+            let components = [playerRow, adminRow];
+
+            if (tournament.rulesLink) {
+                const rulesButton = new ButtonBuilder()
+                    .setLabel('View Rules')
+                    .setURL(tournament.rulesLink)
+                    .setStyle(ButtonStyle.Link);
+                
+                components.push(new ActionRowBuilder().addComponents(rulesButton));
+            }
+
             await announcementChannel.send({ 
                 embeds: [announceEmbed], 
-                components: [playerRow, adminRow]
+                components: components
             });
             
             tournament.isFinalized = true;

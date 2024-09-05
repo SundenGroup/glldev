@@ -37,7 +37,7 @@ client.on('interactionCreate', async interaction => {
 
             await command.execute(interaction);
         } else if (interaction.isButton()) {
-            const [action] = interaction.customId.split('_');
+            const [action, tournamentId] = interaction.customId.split('_');
             
             switch(action) {
                 case 'signup':
@@ -50,7 +50,7 @@ client.on('interactionCreate', async interaction => {
                     if (interaction.member.permissions.has('ADMINISTRATOR')) {
                         const seedCommand = client.commands.get('seed');
                         if (seedCommand) {
-                            await seedCommand.execute(interaction);
+                            await seedCommand.execute(interaction, tournamentId);
                         }
                     } else {
                         await interaction.reply({ content: 'Only administrators can seed the tournament.', ephemeral: true });
@@ -58,9 +58,9 @@ client.on('interactionCreate', async interaction => {
                     break;
                 case 'start':
                     if (interaction.member.permissions.has('ADMINISTRATOR')) {
-                        const startCommand = client.commands.get('start');
-                        if (startCommand) {
-                            await startCommand.execute(interaction);
+                        const startTournamentCommand = client.commands.get('start_tournament');
+                        if (startTournamentCommand) {
+                            await startTournamentCommand.execute(interaction, tournamentId);
                         }
                     } else {
                         await interaction.reply({ content: 'Only administrators can start the tournament.', ephemeral: true });
@@ -82,7 +82,7 @@ client.on('interactionCreate', async interaction => {
                 if (signupCommand && typeof signupCommand.handleSignupSubmit === 'function') {
                     await signupCommand.handleSignupSubmit(interaction);
                 }
-            } else {
+            } else if (interaction.customId === 'create_tournament_details_modal') {
                 const createTournamentCommand = client.commands.get('create_tournament');
                 if (createTournamentCommand && typeof createTournamentCommand.handleInteraction === 'function') {
                     await createTournamentCommand.handleInteraction(interaction);
