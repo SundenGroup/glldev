@@ -1,13 +1,13 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
 const GAME_PRESETS = {
-    VALORANT: { name: "VALORANT", teamSize: 5 },
-    GEOGUESSR: { name: "GeoGuessr", teamSize: 1 },
-    PUBG: { name: "PUBG", teamSize: 4 },
-    DEADLOCK: { name: "Deadlock", teamSize: 5 },
-    CS2: { name: "Counter-Strike 2", teamSize: 5 },
-    SPLITGATE2: { name: "SplitGate 2", teamSize: 3 },
-    OTHER: { name: "Other", teamSize: null }
+    VALORANT: { name: "VALORANT", teamSize: 5, emojiId: "1281299007829971094" }, // Replace with actual Valorant emoji ID
+    GEOGUESSR: { name: "GeoGuessr", teamSize: 1, emojiId: "1281313927245856798" }, // Replace with actual GeoGuessr emoji ID
+    PUBG: { name: "PUBG", teamSize: 4, emojiId: "1281299007829971096" }, // Replace with actual PUBG emoji ID
+    DEADLOCK: { name: "Deadlock", teamSize: 5, emojiId: "1281299007829971097" }, // Replace with actual Deadlock emoji ID
+    CS2: { name: "Counter-Strike 2", teamSize: 5, emojiId: "1281299007829971098" }, // Replace with actual CS2 emoji ID
+    SPLITGATE2: { name: "SplitGate 2", teamSize: 3, emojiId: "1281299007829971099" }, // Replace with actual SplitGate 2 emoji ID
+    OTHER: { name: "Other", teamSize: null, emojiId: "1281299007829971100" } // Replace with actual Other emoji ID
 };
 
 const tournaments = new Map();
@@ -35,29 +35,30 @@ module.exports = {
     tournaments,
 
     async execute(interaction) {
-        if (!interaction.member.permissions.has('ADMINISTRATOR')) {
-            await interaction.reply({ content: 'You need to be an administrator to create a tournament.', ephemeral: true });
-            return;
-        }
+    if (!interaction.member.permissions.has('ADMINISTRATOR')) {
+        await interaction.reply({ content: 'You need to be an administrator to create a tournament.', ephemeral: true });
+        return;
+    }
 
-        const gameButtons = Object.entries(GAME_PRESETS).map(([key, value]) => {
-            return new ButtonBuilder()
-                .setCustomId(`create_tournament_game_${key}`)
-                .setLabel(value.name)
-                .setStyle(ButtonStyle.Primary);
-        });
+    const gameButtons = Object.entries(GAME_PRESETS).map(([key, value]) => {
+        return new ButtonBuilder()
+            .setCustomId(`create_tournament_game_${key}`)
+            .setLabel(value.name)
+            .setEmoji(value.emojiId) // Use the emojiId here
+            .setStyle(ButtonStyle.Primary);
+    });
 
-        const rows = [];
-        for (let i = 0; i < gameButtons.length; i += 5) {
-            rows.push(new ActionRowBuilder().addComponents(gameButtons.slice(i, i + 5)));
-        }
+    const rows = [];
+    for (let i = 0; i < gameButtons.length; i += 5) {
+        rows.push(new ActionRowBuilder().addComponents(gameButtons.slice(i, i + 5)));
+    }
 
-        await interaction.reply({
-            content: 'Select the game for your tournament:',
-            components: rows,
-            ephemeral: true
-        });
-    },
+    await interaction.reply({
+        content: 'Select the game for your tournament:',
+        components: rows,
+        ephemeral: true
+    });
+},
 
     async handleInteraction(interaction) {
         try {
