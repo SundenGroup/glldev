@@ -1,13 +1,13 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
 const GAME_PRESETS = {
-    VALORANT: { name: "VALORANT", teamSize: 5, emojiId: "1281299007829971094" }, // Replace with actual Valorant emoji ID
-    GEOGUESSR: { name: "GeoGuessr", teamSize: 1, emojiId: "1281313927245856798" }, // Replace with actual GeoGuessr emoji ID
-    PUBG: { name: "PUBG", teamSize: 4, emojiId: "1281299007829971094" }, // Replace with actual PUBG emoji ID
-    DEADLOCK: { name: "Deadlock", teamSize: 5, emojiId: "1281299007829971094" }, // Replace with actual Deadlock emoji ID
-    CS2: { name: "Counter-Strike 2", teamSize: 5, emojiId: "1281299007829971094" }, // Replace with actual CS2 emoji ID
-    SPLITGATE2: { name: "SplitGate 2", teamSize: 3, emojiId: "1281299007829971094" }, // Replace with actual SplitGate 2 emoji ID
-    OTHER: { name: "Other", teamSize: null, emojiId: "1281299007829971094" } // Replace with actual Other emoji ID
+    VALORANT: { name: "VALORANT", teamSize: 5, emojiId: "1281299007829971094", style: ButtonStyle.Primary },
+    GEOGUESSR: { name: "GeoGuessr", teamSize: 1, emojiId: "1281313927245856798", style: ButtonStyle.Primary },
+    PUBG: { name: "PUBG", teamSize: 4, emojiId: "1281299007829971094", style: ButtonStyle.Primary },
+    DEADLOCK: { name: "Deadlock", teamSize: 5, emojiId: "1281299007829971094", style: ButtonStyle.Primary },
+    CS2: { name: "Counter-Strike 2", teamSize: 5, emojiId: "1281299007829971094", style: ButtonStyle.Primary },
+    SPLITGATE2: { name: "SplitGate 2", teamSize: 3, emojiId: "1281299007829971094", style: ButtonStyle.Primary },
+    OTHER: { name: "Other", teamSize: null, emojiId: "1281299007829971094", style: ButtonStyle.Primary }
 };
 
 const tournaments = new Map();
@@ -44,8 +44,8 @@ module.exports = {
         return new ButtonBuilder()
             .setCustomId(`create_tournament_game_${key}`)
             .setLabel(value.name)
-            .setEmoji(value.emojiId) // Use the emojiId here
-            .setStyle(ButtonStyle.Primary);
+            .setEmoji(value.emojiId)
+            .setStyle(value.style);
     });
 
     const rows = [];
