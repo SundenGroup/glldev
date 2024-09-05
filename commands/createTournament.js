@@ -3,10 +3,10 @@ const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRow
 const GAME_PRESETS = {
     VALORANT: { name: "VALORANT", teamSize: 5, emojiId: "1281299007829971094", style: ButtonStyle.Secondary },
     GEOGUESSR: { name: "GeoGuessr", teamSize: 1, emojiId: "1281313927245856798", style: ButtonStyle.Secondary },
+    POKÉMON: { name: "Pokémon VGC", teamSize: 1, emojiId: "1281319085183078525", style: ButtonStyle.Secondary },
     PUBG: { name: "PUBG", teamSize: 4, emojiId: "1281299007829971094", style: ButtonStyle.Secondary },
     DEADLOCK: { name: "Deadlock", teamSize: 5, emojiId: "1281299007829971094", style: ButtonStyle.Secondary },
     CS2: { name: "Counter-Strike 2", teamSize: 5, emojiId: "1281299007829971094", style: ButtonStyle.Secondary },
-    SPLITGATE2: { name: "SplitGate 2", teamSize: 3, emojiId: "1281299007829971094", style: ButtonStyle.Secondary },
     OTHER: { name: "Other", teamSize: null, emojiId: "1281299007829971094", style: ButtonStyle.Secondary }
 };
 
