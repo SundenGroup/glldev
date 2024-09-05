@@ -1,12 +1,12 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
 const GAME_PRESETS = {
-    VALORANT: { name: "VALORANT", teamSize: 5, emojiId: "1281299007829971094", style: ButtonStyle.Secondary },
+    VALORANT: { name: "VALORANT", teamSize: 5, emojiId: "1281320366152618045", style: ButtonStyle.Secondary },
     GEOGUESSR: { name: "GeoGuessr", teamSize: 1, emojiId: "1281313927245856798", style: ButtonStyle.Secondary },
     POKÉMON: { name: "Pokémon VGC", teamSize: 1, emojiId: "1281319085183078525", style: ButtonStyle.Secondary },
-    PUBG: { name: "PUBG", teamSize: 4, emojiId: "1281299007829971094", style: ButtonStyle.Secondary },
-    DEADLOCK: { name: "Deadlock", teamSize: 5, emojiId: "1281299007829971094", style: ButtonStyle.Secondary },
-    CS2: { name: "Counter-Strike 2", teamSize: 5, emojiId: "1281299007829971094", style: ButtonStyle.Secondary },
+    PUBG: { name: "PUBG", teamSize: 4, emojiId: "1281320349941629093", style: ButtonStyle.Secondary },
+    DEADLOCK: { name: "Deadlock", teamSize: 5, emojiId: "1281321276559982614", style: ButtonStyle.Secondary },
+    CS2: { name: "Counter-Strike 2", teamSize: 5, emojiId: "1281321362396287008", style: ButtonStyle.Secondary },
     OTHER: { name: "Other", teamSize: null, emojiId: "1281299007829971094", style: ButtonStyle.Secondary }
 };
 
