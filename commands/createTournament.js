@@ -236,7 +236,7 @@ async finalizeTournament(interaction) {
         const announceEmbed = new EmbedBuilder()
             .setColor('#D9212C')  // GeoGuessr red color
             .setTitle(tournament.title)
-            .setDescription(`${tournament.description}\n\n**Date and Time:** ${discordTimestamp} (${relativeTime})`)
+            .setDescription(`${tournament.description}\n\n**Date & Time:**\n${discordTimestamp} (${relativeTime})`)
             .addFields(
                 { name: 'Bracket', value: 'Single Elimination', inline: true },
                 { name: 'Matches', value: 'Best of 1', inline: true },
