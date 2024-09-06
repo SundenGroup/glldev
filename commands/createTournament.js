@@ -190,7 +190,7 @@ module.exports = {
     });
 },
 
-    async finalizeTournament(interaction) {
+async finalizeTournament(interaction) {
     console.log('Finalizing tournament');
     try {
         const tournamentId = interaction.customId.split('_')[3];
@@ -214,43 +214,42 @@ module.exports = {
 
         const signupButton = new ButtonBuilder()
             .setCustomId(`signup_${tournament.id}`)
-            .setLabel('Register')
+            .setLabel('Sign Up')
+            .setStyle(ButtonStyle.Danger);  // Changed to red
+
+        const seedButton = new ButtonBuilder()
+            .setCustomId(`seed_${tournament.id}`)
+            .setLabel('Seed Tournament')
             .setStyle(ButtonStyle.Primary);
 
-        const spectateButton = new ButtonBuilder()
-            .setCustomId(`spectate_${tournament.id}`)
-            .setLabel('Spectate')
-            .setStyle(ButtonStyle.Secondary);
+        const startButton = new ButtonBuilder()
+            .setCustomId(`start_${tournament.id}`)
+            .setLabel('Start Tournament')
+            .setStyle(ButtonStyle.Primary);
 
-        const viewBracketButton = new ButtonBuilder()
-            .setCustomId(`view_bracket_${tournament.id}`)
-            .setLabel('View Bracket')
-            .setStyle(ButtonStyle.Secondary);
-
-        const playerRow = new ActionRowBuilder().addComponents(signupButton, spectateButton, viewBracketButton);
+        const playerRow = new ActionRowBuilder().addComponents(signupButton);
+        const adminRow = new ActionRowBuilder().addComponents(seedButton, startButton);
 
         const discordTimestamp = `<t:${Math.floor(tournament.dateTime.getTime() / 1000)}:F>`;
         const relativeTime = `<t:${Math.floor(tournament.dateTime.getTime() / 1000)}:R>`;
 
         const announceEmbed = new EmbedBuilder()
-            .setColor('#FFA500')  // Orange color
+            .setColor('#D9212C')  // GeoGuessr red color
             .setTitle(tournament.title)
-            .setDescription(tournament.description)
+            .setDescription(`${tournament.description}\n\n**Date and Time:** ${discordTimestamp} (${relativeTime})`)
             .addFields(
                 { name: 'Bracket', value: 'Single Elimination', inline: true },
-                { name: 'Status', value: 'Registration Opened', inline: true },
                 { name: 'Matches', value: 'Best of 1', inline: true },
                 { name: 'Team Size', value: tournament.game.teamSize.toString(), inline: true },
                 { name: 'Participants', value: `0/${tournament.maxTeams}`, inline: true },
                 { name: '\u200B', value: '\u200B', inline: true },  // Empty field for alignment
-                { name: 'Date and Time', value: `${discordTimestamp} (${relativeTime})` }
+                { name: '\u200B', value: '\u200B', inline: true }   // Empty field for alignment
             )
-            .setThumbnail(`https://cdn.discordapp.com/emojis/${tournament.game.emojiId}.png`)
-            .setFooter({ text: 'GLL Tournament Bot', iconURL: 'https://example.com/bot-icon.png' });  // Replace with your bot's icon URL
+            .setThumbnail(`https://cdn.discordapp.com/emojis/${tournament.game.emojiId}.png`);
 
         await announcementChannel.send({ 
             embeds: [announceEmbed], 
-            components: [playerRow]
+            components: [playerRow, adminRow]
         });
         
         tournament.isFinalized = true;
