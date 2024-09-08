@@ -109,7 +109,8 @@ async handleInteraction(interaction) {
     }
 },
 
-    async handleGameSelection(interaction) {
+async handleGameSelection(interaction) {
+    try {
         const gameKey = interaction.customId.split('_')[3];
         const game = GAME_PRESETS[gameKey];
 
@@ -160,9 +161,15 @@ async handleInteraction(interaction) {
         tournaments.set(interaction.guildId, { game: game });
 
         await interaction.showModal(modal);
-    },
+    } catch (error) {
+        console.error('Error in handleGameSelection:', error);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: 'An error occurred while setting up the tournament details. Please try again.', ephemeral: true });
+        }
+    }
+},
 
-    async handleTournamentCreation(interaction) {
+async handleTournamentCreation(interaction) {
     try {
         const title = interaction.fields.getTextInputValue('title');
         const description = interaction.fields.getTextInputValue('description');
@@ -170,6 +177,11 @@ async handleInteraction(interaction) {
         const time = interaction.fields.getTextInputValue('time');
         const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
 
+       // Validate inputs
+        if (!title || !description || !date || !time || isNaN(maxTeams)) {
+            throw new Error('Invalid input. Please fill all fields correctly.');
+        }
+        
         // Validate date and time
         const dateTimeString = `${date}T${time}:00`;
         const dateTime = new Date(dateTimeString);
