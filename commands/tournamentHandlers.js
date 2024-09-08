@@ -106,7 +106,7 @@ async handleGameSelection(interaction) {
             await interaction.reply({ content: 'An error occurred while setting up the tournament details. Please try again.', ephemeral: true });
         }
     }
-},
+}
 
 async handleTournamentCreation(interaction) {
     try {
@@ -183,7 +183,7 @@ async handleTournamentCreation(interaction) {
             ephemeral: true 
         });
     }
-},
+}
     
 async showModifyBasicSettings(interaction) {
     const tournament = tournaments.get(interaction.guildId);
@@ -240,7 +240,7 @@ async showModifyBasicSettings(interaction) {
     );
 
     await interaction.showModal(modal);
-},
+}
 
 async showAdvancedOptions(interaction) {
     const modal = new ModalBuilder()
@@ -281,7 +281,7 @@ async showAdvancedOptions(interaction) {
     );
 
     await interaction.showModal(modal);
-},
+}
 
 async handleAdvancedOptions(interaction) {
     try {
@@ -326,7 +326,7 @@ async handleAdvancedOptions(interaction) {
             await interaction.reply({ content: errorMessage, ephemeral: true }).catch(console.error);
         }
     }
-},
+}
 
 async handleTournamentModeSelection(interaction) {
     const tournament = tournaments.get(interaction.guildId);
@@ -373,7 +373,7 @@ async handleTournamentModeSelection(interaction) {
         components: roleRows,
         ephemeral: true
     });
-},
+}
 
 async handleRoleSelection(interaction) {
     try {
@@ -437,7 +437,7 @@ async handleRoleSelection(interaction) {
             await interaction.reply({ content: 'An error occurred while selecting roles. Please try again.', ephemeral: true }).catch(console.error);
         }
     }
-},
+}
 
 async handleConfirmAdvanced(interaction) {
     const tournament = tournaments.get(interaction.guildId);
@@ -477,7 +477,7 @@ async handleConfirmAdvanced(interaction) {
         components: [row],
         ephemeral: true
     });
-},
+}
 
 async showFinalizationOption(interaction) {
         const tournament = tournaments.get(interaction.guildId);
@@ -494,7 +494,7 @@ async showFinalizationOption(interaction) {
             components: [row],
             ephemeral: true
         });
-    },
+    }
 
 async finalizeTournament(interaction) {
         console.log('Finalizing tournament');
@@ -589,7 +589,7 @@ async finalizeTournament(interaction) {
             await interaction.reply({ content: 'An error occurred while finalizing the tournament. Please try again.', ephemeral: true });
         }
     }
-},
+}
 
 module.exports = {
     handleInteraction,
