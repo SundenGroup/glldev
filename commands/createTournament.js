@@ -70,19 +70,36 @@ async handleInteraction(interaction) {
         if (interaction.isButton()) {
             if (interaction.customId.startsWith('create_tournament_game_')) {
                 await this.handleGameSelection(interaction);
+                return; // Return early to prevent further processing
             } else if (interaction.customId.startsWith('create_tournament_finalize_')) {
                 await this.finalizeTournament(interaction);
+                return;
             } else if (interaction.customId === 'create_tournament_advanced') {
                 await this.showAdvancedOptions(interaction);
+                return;
             } else if (interaction.customId === 'create_tournament_modify') {
                 await this.showModifyBasicSettings(interaction);
+                return;
             } else if (interaction.customId === 'create_tournament_confirm_advanced') {
                 await this.handleConfirmAdvanced(interaction);
+                return;
             }
         } else if (interaction.isModalSubmit()) {
-            // ... (existing modal submit handling)
+            if (interaction.customId === 'create_tournament_details_modal') {
+                await this.handleTournamentCreation(interaction);
+                return;
+            } else if (interaction.customId === 'create_tournament_advanced_modal') {
+                await this.handleAdvancedOptions(interaction);
+                return;
+            }
         } else if (interaction.isStringSelectMenu()) {
-            // ... (existing select menu handling)
+            if (interaction.customId === 'tournament_mode_select') {
+                await this.handleTournamentModeSelection(interaction);
+                return;
+            } else if (interaction.customId === 'tournament_role_select') {
+                await this.handleRoleSelection(interaction);
+                return;
+            }
         }
     } catch (error) {
         console.error('Error in create_tournament handleInteraction:', error);
