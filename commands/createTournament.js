@@ -70,7 +70,7 @@ async handleInteraction(interaction) {
         if (interaction.isButton()) {
             if (interaction.customId.startsWith('create_tournament_game_')) {
                 await this.handleGameSelection(interaction);
-                return; // Return early to prevent further processing
+                return;
             } else if (interaction.customId.startsWith('create_tournament_finalize_')) {
                 await this.finalizeTournament(interaction);
                 return;
@@ -82,6 +82,12 @@ async handleInteraction(interaction) {
                 return;
             } else if (interaction.customId === 'create_tournament_confirm_advanced') {
                 await this.handleConfirmAdvanced(interaction);
+                return;
+            } else if (interaction.customId.startsWith('mode_')) {
+                await this.handleTournamentModeSelection(interaction);
+                return;
+            } else if (interaction.customId.startsWith('role_')) {
+                await this.handleRoleSelection(interaction);
                 return;
             }
         } else if (interaction.isModalSubmit()) {
@@ -357,71 +363,36 @@ async handleAdvancedOptions(interaction) {
         tournament.rulesLink = interaction.fields.getTextInputValue('rules_link');
         tournament.logoLink = interaction.fields.getTextInputValue('logo_link');
 
-        const modeSelect = new StringSelectMenuBuilder()
-            .setCustomId('tournament_mode_select')
-            .setPlaceholder('Select tournament mode')
-            .addOptions(
-                TOURNAMENT_MODES.map(mode => 
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(mode)
-                        .setValue(mode)
-                )
-            );
+        // Create buttons for tournament modes
+        const modeButtons = TOURNAMENT_MODES.map(mode => 
+            new ButtonBuilder()
+                .setCustomId(`mode_${mode.replace(/\s+/g, '_')}`)
+                .setLabel(mode)
+                .setStyle(ButtonStyle.Primary)
+        );
 
-        const modeRow = new ActionRowBuilder().addComponents(modeSelect);
-
-        const eligibleRoles = interaction.guild.roles.cache
-            .filter(role => role.name !== '@everyone' && !role.managed)
-            .map(role => ({
-                label: role.name,
-                value: role.id
-            }));
-
-        let components = [modeRow];
-        let content = 'Please select the tournament mode and restricted roles (if applicable):';
-
-        if (eligibleRoles.length >= 5) {
-            const roleSelect = new StringSelectMenuBuilder()
-                .setCustomId('tournament_role_select')
-                .setPlaceholder('Select restricted roles (optional)')
-                .setMinValues(0)
-                .setMaxValues(Math.min(eligibleRoles.length, 25))
-                .addOptions(eligibleRoles);
-
-            const roleRow = new ActionRowBuilder().addComponents(roleSelect);
-            components.push(roleRow);
-        } else {
-            content += '\nNote: Role restriction is not available due to insufficient eligible roles.';
+        const modeRows = [];
+        for (let i = 0; i < modeButtons.length; i += 5) {
+            modeRows.push(new ActionRowBuilder().addComponents(modeButtons.slice(i, i + 5)));
         }
 
-        const confirmButton = new ButtonBuilder()
-            .setCustomId('create_tournament_confirm_advanced')
-            .setLabel('Confirm Settings')
-            .setStyle(ButtonStyle.Success)
-            .setDisabled(true);
+        const content = 'Please select the tournament mode:';
 
-        const confirmRow = new ActionRowBuilder().addComponents(confirmButton);
-        components.push(confirmRow);
+        await interaction.reply({
+            content,
+            components: modeRows,
+            ephemeral: true
+        });
 
-        await interaction.update({ 
-            content: content, 
-            components: components,
-        ephemeral: true
-});
     } catch (error) {
-    console.error('Error in handleAdvancedOptions:', error);
-    if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ 
-            content: 'An error occurred while processing your request. Please try again.', 
-            ephemeral: true 
-        }).catch(console.error);
-    } else {
-        await interaction.followUp({ 
-            content: 'An error occurred while processing your request. Please try again.', 
-            ephemeral: true 
-        }).catch(console.error);
+        console.error('Error in handleAdvancedOptions:', error);
+        const errorMessage = 'An error occurred while processing your request. Please try again.';
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: errorMessage, ephemeral: true }).catch(console.error);
+        } else {
+            await interaction.reply({ content: errorMessage, ephemeral: true }).catch(console.error);
+        }
     }
-}
 },
 
 async handleTournamentModeSelection(interaction) {
@@ -431,14 +402,44 @@ async handleTournamentModeSelection(interaction) {
         return;
     }
 
-    tournament.tournamentMode = interaction.values[0];
-    
-    // Enable the Confirm button if both selections are made
-    if (tournament.restrictedRoles) {
-        await this.enableConfirmButton(interaction);
-    } else {
-        await interaction.update({ content: 'Tournament mode set. Please select restricted roles (if any).', components: interaction.message.components });
+    const selectedMode = interaction.customId.split('_').slice(1).join(' ');
+    tournament.tournamentMode = selectedMode;
+
+    // Now show role selection buttons
+    const eligibleRoles = interaction.guild.roles.cache
+        .filter(role => role.name !== '@everyone' && !role.managed)
+        .first(24); // Limit to first 24 roles to leave room for the Confirm button
+
+    const roleButtons = eligibleRoles.map(role => 
+        new ButtonBuilder()
+            .setCustomId(`role_${role.id}`)
+            .setLabel(role.name)
+            .setStyle(ButtonStyle.Secondary)
+    );
+
+    const roleRows = [];
+    for (let i = 0; i < roleButtons.length; i += 5) {
+        roleRows.push(new ActionRowBuilder().addComponents(roleButtons.slice(i, i + 5)));
     }
+
+    const confirmButton = new ButtonBuilder()
+        .setCustomId('create_tournament_confirm_advanced')
+        .setLabel('Confirm Settings')
+        .setStyle(ButtonStyle.Success)
+        .setDisabled(true);
+
+    // Add the confirm button to the last row if there's space, or create a new row
+    if (roleRows[roleRows.length - 1].components.length < 5) {
+        roleRows[roleRows.length - 1].addComponents(confirmButton);
+    } else {
+        roleRows.push(new ActionRowBuilder().addComponents(confirmButton));
+    }
+
+    await interaction.update({
+        content: `Tournament mode set to: ${selectedMode}\nPlease select restricted roles (if any):`,
+        components: roleRows,
+        ephemeral: true
+    });
 },
 
 async handleRoleSelection(interaction) {
@@ -448,33 +449,84 @@ async handleRoleSelection(interaction) {
         return;
     }
 
-    tournament.restrictedRoles = interaction.values;
+    const roleId = interaction.customId.split('_')[1];
+    const role = interaction.guild.roles.cache.get(roleId);
 
-    // Enable the Confirm button if both selections are made
-    if (tournament.tournamentMode) {
-        await this.enableConfirmButton(interaction);
-    } else {
-        await interaction.update({ content: 'Roles set. Please select the tournament mode.', components: interaction.message.components });
+    if (!tournament.restrictedRoles) {
+        tournament.restrictedRoles = [];
     }
-},
 
-async enableConfirmButton(interaction) {
+    // Toggle role selection
+    if (tournament.restrictedRoles.includes(roleId)) {
+        tournament.restrictedRoles = tournament.restrictedRoles.filter(id => id !== roleId);
+    } else {
+        tournament.restrictedRoles.push(roleId);
+    }
+
+    // Update button styles
     const components = interaction.message.components;
-    const confirmRow = components.find(row => row.components[0].customId === 'create_tournament_confirm_advanced');
-    confirmRow.components[0].setDisabled(false);
+    for (const row of components) {
+        for (const button of row.components) {
+            if (button.customId.startsWith('role_')) {
+                const buttonRoleId = button.customId.split('_')[1];
+                button.setStyle(tournament.restrictedRoles.includes(buttonRoleId) ? ButtonStyle.Primary : ButtonStyle.Secondary);
+            }
+        }
+    }
 
-    await interaction.update({ components: components });
+    // Find the confirm button and ensure it's enabled
+    const confirmRow = components.find(row => row.components.some(button => button.customId === 'create_tournament_confirm_advanced'));
+    if (confirmRow) {
+        const confirmButton = confirmRow.components.find(button => button.customId === 'create_tournament_confirm_advanced');
+        confirmButton.setDisabled(false);
+    }
+
+    const selectedRoles = tournament.restrictedRoles.map(id => interaction.guild.roles.cache.get(id).name).join(', ');
+
+    await interaction.update({
+        content: `Tournament mode: ${tournament.tournamentMode}\nSelected roles: ${selectedRoles || 'None'}`,
+        components: components
+    });
 },
 
 async handleConfirmAdvanced(interaction) {
     const tournament = tournaments.get(interaction.guildId);
     if (!tournament) {
-        await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+        await interaction.update({ content: 'No active tournament found.', components: [], ephemeral: true });
         return;
     }
 
-    // Show finalization option
-    await this.showFinalizationOption(interaction);
+    const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle('Tournament Advanced Settings')
+        .addFields(
+            { name: 'Tournament Mode', value: tournament.tournamentMode },
+            { name: 'Best of', value: tournament.bestOf.toString() },
+            { name: 'Players per Team', value: tournament.playersPerTeam.toString() },
+            { name: 'Restricted Roles', value: tournament.restrictedRoles.length > 0 ? tournament.restrictedRoles.map(id => interaction.guild.roles.cache.get(id).name).join(', ') : 'None' }
+        );
+
+    if (tournament.rulesLink) {
+        embed.addFields({ name: 'Rules', value: tournament.rulesLink });
+    }
+
+    if (tournament.logoLink) {
+        embed.setImage(tournament.logoLink);
+    }
+
+    const finalizeButton = new ButtonBuilder()
+        .setCustomId(`create_tournament_finalize_${tournament.id}`)
+        .setLabel('Finalize Tournament')
+        .setStyle(ButtonStyle.Success);
+
+    const row = new ActionRowBuilder().addComponents(finalizeButton);
+
+    await interaction.update({
+        content: 'Advanced settings confirmed. Review the settings and click "Finalize Tournament" when ready.',
+        embeds: [embed],
+        components: [row],
+        ephemeral: true
+    });
 },
 
     async showFinalizationOption(interaction) {
