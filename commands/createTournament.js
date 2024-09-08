@@ -65,36 +65,32 @@ module.exports = {
         });
     },
 
-    async handleInteraction(interaction) {
-        try {
-            if (interaction.isButton()) {
-                if (interaction.customId.startsWith('create_tournament_game_')) {
-                    await this.handleGameSelection(interaction);
-                } else if (interaction.customId.startsWith('create_tournament_finalize_')) {
-                    await this.finalizeTournament(interaction);
-                } else if (interaction.customId === 'create_tournament_advanced') {
-                    await this.showAdvancedOptions(interaction);
-                }
-            } else if (interaction.isModalSubmit()) {
-                if (interaction.customId === 'create_tournament_details_modal') {
-                    await this.handleTournamentCreation(interaction);
-                } else if (interaction.customId === 'create_tournament_advanced_modal') {
-                    await this.handleAdvancedOptions(interaction);
-                }
-            } else if (interaction.isStringSelectMenu()) {
-                if (interaction.customId === 'tournament_mode_select') {
-                    await this.handleTournamentModeSelection(interaction);
-                } else if (interaction.customId === 'tournament_role_select') {
-                    await this.handleRoleSelection(interaction);
-                }
+async handleInteraction(interaction) {
+    try {
+        if (interaction.isButton()) {
+            if (interaction.customId.startsWith('create_tournament_game_')) {
+                await this.handleGameSelection(interaction);
+            } else if (interaction.customId.startsWith('create_tournament_finalize_')) {
+                await this.finalizeTournament(interaction);
+            } else if (interaction.customId === 'create_tournament_advanced') {
+                await this.showAdvancedOptions(interaction);
+            } else if (interaction.customId === 'create_tournament_modify') {
+                await this.showModifyBasicSettings(interaction);
+            } else if (interaction.customId === 'create_tournament_confirm_advanced') {
+                await this.handleConfirmAdvanced(interaction);
             }
-        } catch (error) {
-            console.error('Error in create_tournament handleInteraction:', error);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true }).catch(console.error);
-            }
+        } else if (interaction.isModalSubmit()) {
+            // ... (existing modal submit handling)
+        } else if (interaction.isStringSelectMenu()) {
+            // ... (existing select menu handling)
         }
-    },
+    } catch (error) {
+        console.error('Error in create_tournament handleInteraction:', error);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true }).catch(console.error);
+        }
+    }
+},
 
     async handleGameSelection(interaction) {
         const gameKey = interaction.customId.split('_')[3];
@@ -166,37 +162,42 @@ module.exports = {
         const tournament = new Tournament(title, description, dateTime, maxTeams, tournamentData.game);
         tournaments.set(interaction.guildId, tournament);
 
-        const embed = new EmbedBuilder()
-            .setColor('#D9212C')
-            .setTitle('Tournament Created')
-            .addFields(
-                { name: 'Title', value: tournament.title },
-                { name: 'Description', value: tournament.description },
-                { name: 'Date and Time', value: tournament.dateTime.toISOString() },
-                { name: 'Max Teams', value: tournament.maxTeams.toString() },
-                { name: 'Game', value: tournament.game.name }
-            );
+    const embed = new EmbedBuilder()
+        .setColor('#D9212C')
+        .setTitle('Tournament Created')
+        .addFields(
+            { name: 'Title', value: tournament.title },
+            { name: 'Description', value: tournament.description },
+            { name: 'Date and Time', value: `<t:${Math.floor(tournament.dateTime.getTime() / 1000)}:F>` },
+            { name: 'Max Teams', value: tournament.maxTeams.toString() },
+            { name: 'Game', value: tournament.game.name }
+        );
 
-        const finalizeButton = new ButtonBuilder()
-            .setCustomId(`create_tournament_finalize_${tournament.id}`)
-            .setLabel('Finalize Tournament')
-            .setStyle(ButtonStyle.Success);
+    const finalizeButton = new ButtonBuilder()
+        .setCustomId(`create_tournament_finalize_${tournament.id}`)
+        .setLabel('Finalize Tournament')
+        .setStyle(ButtonStyle.Success);
 
-        const advancedButton = new ButtonBuilder()
-            .setCustomId('create_tournament_advanced')
-            .setLabel('Advanced Options')
-            .setStyle(ButtonStyle.Primary);
+    const advancedButton = new ButtonBuilder()
+        .setCustomId('create_tournament_advanced')
+        .setLabel('Advanced Options')
+        .setStyle(ButtonStyle.Primary);
 
-        const row = new ActionRowBuilder()
-            .addComponents(finalizeButton, advancedButton);
+    const modifyButton = new ButtonBuilder()
+        .setCustomId('create_tournament_modify')
+        .setLabel('Modify Basic Settings')
+        .setStyle(ButtonStyle.Secondary);
 
-        await interaction.reply({ 
-            content: 'Tournament created successfully! Click "Finalize Tournament" to announce it, or "Advanced Options" for more settings.', 
-            embeds: [embed], 
-            components: [row],
-            ephemeral: true
-        });
-    },
+    const row = new ActionRowBuilder()
+        .addComponents(finalizeButton, advancedButton, modifyButton);
+
+    await interaction.reply({ 
+        content: 'Tournament created successfully! You can finalize the tournament, set advanced options, or modify basic settings.', 
+        embeds: [embed], 
+        components: [row],
+        ephemeral: true
+    });
+},
 
 async showAdvancedOptions(interaction) {
     const modal = new ModalBuilder()
@@ -215,17 +216,25 @@ async showAdvancedOptions(interaction) {
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
-    const linksInput = new TextInputBuilder()
-        .setCustomId('links')
-        .setLabel('Rules & Logo Links (optional)')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Rules: http://example.com/rules\nLogo: http://example.com/logo.png')
-        .setRequired(false);
+    const rulesLinkInput = new TextInputBuilder()
+        .setCustomId('rules_link')
+        .setLabel('Rules Link (optional)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)
+        .setPlaceholder('http://example.com/rules');
+
+    const logoLinkInput = new TextInputBuilder()
+        .setCustomId('logo_link')
+        .setLabel('Custom Logo Link (optional)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)
+        .setPlaceholder('http://example.com/logo.png');
 
     modal.addComponents(
         new ActionRowBuilder().addComponents(bestOfInput),
         new ActionRowBuilder().addComponents(playersPerTeamInput),
-        new ActionRowBuilder().addComponents(linksInput)
+        new ActionRowBuilder().addComponents(rulesLinkInput),
+        new ActionRowBuilder().addComponents(logoLinkInput)
     );
 
     await interaction.showModal(modal);
@@ -240,7 +249,8 @@ async handleAdvancedOptions(interaction) {
 
     tournament.bestOf = parseInt(interaction.fields.getTextInputValue('best_of'));
     tournament.playersPerTeam = parseInt(interaction.fields.getTextInputValue('players_per_team'));
-    tournament.links = interaction.fields.getTextInputValue('links');
+    tournament.rulesLink = interaction.fields.getTextInputValue('rules_link');
+    tournament.logoLink = interaction.fields.getTextInputValue('logo_link');
 
     const modeSelect = new StringSelectMenuBuilder()
         .setCustomId('tournament_mode_select')
@@ -263,7 +273,7 @@ async handleAdvancedOptions(interaction) {
         }));
 
     let components = [modeRow];
-    let content = 'Advanced options set. Please select the tournament mode:';
+    let content = 'Please select the tournament mode and restricted roles (if applicable):';
 
     if (eligibleRoles.length >= 5) {
         const roleSelect = new StringSelectMenuBuilder()
@@ -275,10 +285,18 @@ async handleAdvancedOptions(interaction) {
 
         const roleRow = new ActionRowBuilder().addComponents(roleSelect);
         components.push(roleRow);
-        content += ' and restricted roles (if any)';
     } else {
         content += '\nNote: Role restriction is not available due to insufficient eligible roles.';
     }
+
+    const confirmButton = new ButtonBuilder()
+        .setCustomId('create_tournament_confirm_advanced')
+        .setLabel('Confirm Settings')
+        .setStyle(ButtonStyle.Success)
+        .setDisabled(true);
+
+    const confirmRow = new ActionRowBuilder().addComponents(confirmButton);
+    components.push(confirmRow);
 
     try {
         await interaction.reply({ 
@@ -305,26 +323,50 @@ async handleTournamentModeSelection(interaction) {
     }
 
     tournament.tournamentMode = interaction.values[0];
+    
+    // Enable the Confirm button if both selections are made
+    if (tournament.restrictedRoles) {
+        await this.enableConfirmButton(interaction);
+    } else {
+        await interaction.update({ content: 'Tournament mode set. Please select restricted roles (if any).' });
+    }
+},
 
-        // Check if role selection has been made
-        if (tournament.restrictedRoles.length > 0) {
-            await this.showFinalizationOption(interaction);
-        } else {
-            await interaction.update({ content: 'Tournament mode set. Please select restricted roles (if any).' });
-        }
-    },
+async handleRoleSelection(interaction) {
+    const tournament = tournaments.get(interaction.guildId);
+    if (!tournament) {
+        await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+        return;
+    }
 
-    async handleRoleSelection(interaction) {
-        const tournament = tournaments.get(interaction.guildId);
-        if (!tournament) {
-            await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
-            return;
-        }
+    tournament.restrictedRoles = interaction.values;
 
-        tournament.restrictedRoles = interaction.values;
+    // Enable the Confirm button if both selections are made
+    if (tournament.tournamentMode) {
+        await this.enableConfirmButton(interaction);
+    } else {
+        await interaction.update({ content: 'Roles set. Please select the tournament mode.' });
+    }
+},
+    
+async enableConfirmButton(interaction) {
+    const components = interaction.message.components;
+    const confirmRow = components.find(row => row.components[0].customId === 'create_tournament_confirm_advanced');
+    confirmRow.components[0].setDisabled(false);
 
-        await this.showFinalizationOption(interaction);
-    },
+    await interaction.update({ components: components });
+},
+
+async handleConfirmAdvanced(interaction) {
+    const tournament = tournaments.get(interaction.guildId);
+    if (!tournament) {
+        await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+        return;
+    }
+
+    // Show finalization option
+    await this.showFinalizationOption(interaction);
+},
 
     async showFinalizationOption(interaction) {
         const tournament = tournaments.get(interaction.guildId);
@@ -386,7 +428,7 @@ async handleTournamentModeSelection(interaction) {
             const discordTimestamp = `<t:${Math.floor(tournament.dateTime.getTime() / 1000)}:F>`;
             const relativeTime = `<t:${Math.floor(tournament.dateTime.getTime() / 1000)}:R>`;
 
-    const announceEmbed = new EmbedBuilder()
+        const announceEmbed = new EmbedBuilder()
         .setColor('#D9212C')
         .setTitle(tournament.title)
         .setDescription(`${tournament.description}\n\n**Date & Time:**\n${discordTimestamp} (${relativeTime})`)
@@ -398,6 +440,13 @@ async handleTournamentModeSelection(interaction) {
         )
         .setThumbnail(`https://cdn.discordapp.com/emojis/${tournament.game.emojiId}.png`);
 
+    if (tournament.rulesLink) {
+        announceEmbed.addFields({ name: 'Rules', value: `[View Rules](${tournament.rulesLink})`, inline: true });
+    }
+    
+    if (tournament.logoLink) {
+        announceEmbed.setImage(tournament.logoLink);
+    }
     if (tournament.links) {
         const rulesMatch = tournament.links.match(/Rules:\s*(http[s]?:\/\/\S+)/i);
         const logoMatch = tournament.links.match(/Logo:\s*(http[s]?:\/\/\S+)/i);
