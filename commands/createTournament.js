@@ -402,7 +402,7 @@ module.exports = {
             announceEmbed.addFields({ name: 'Restricted to Roles', value: roleNames, inline: false });
         }
         
-            .setThumbnail(`https://cdn.discordapp.com/emojis/${tournament.game.emojiId}.png`);
+            //.setThumbnail(`https://cdn.discordapp.com/emojis/${tournament.game.emojiId}.png`);//
 
         await announcementChannel.send({ 
             embeds: [announceEmbed], 
