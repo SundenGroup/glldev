@@ -46,7 +46,7 @@ async function handleInteraction(interaction) {
             }
         }
     }
-},
+}
 
 async handleGameSelection(interaction) {
     try {
