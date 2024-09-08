@@ -97,8 +97,11 @@ client.on('interactionCreate', async interaction => {
         }
     } catch (error) {
         console.error('Error handling interaction:', error);
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true }).catch(console.error);
+        const errorMessage = 'There was an error while executing this command!';
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: errorMessage, ephemeral: true }).catch(console.error);
+        } else {
+            await interaction.reply({ content: errorMessage, ephemeral: true }).catch(console.error);
         }
     }
 });

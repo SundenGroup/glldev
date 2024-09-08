@@ -198,94 +198,113 @@ module.exports = {
         });
     },
 
-    async showAdvancedOptions(interaction) {
-        const modal = new ModalBuilder()
-            .setCustomId('create_tournament_advanced_modal')
-            .setTitle('Advanced Tournament Options');
+async showAdvancedOptions(interaction) {
+    const modal = new ModalBuilder()
+        .setCustomId('create_tournament_advanced_modal')
+        .setTitle('Advanced Tournament Options');
 
-        const bestOfInput = new TextInputBuilder()
-            .setCustomId('best_of')
-            .setLabel('Best of (e.g., 1, 3, 5)')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+    const bestOfInput = new TextInputBuilder()
+        .setCustomId('best_of')
+        .setLabel('Best of (e.g., 1, 3, 5)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
 
-        const playersPerTeamInput = new TextInputBuilder()
-            .setCustomId('players_per_team')
-            .setLabel('Players per Team')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+    const playersPerTeamInput = new TextInputBuilder()
+        .setCustomId('players_per_team')
+        .setLabel('Players per Team')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
 
-        const linksInput = new TextInputBuilder()
-            .setCustomId('links')
-            .setLabel('Rules & Logo Links (optional)')
-            .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('Rules: http://example.com/rules\nLogo: http://example.com/logo.png')
-            .setRequired(false);
+    const linksInput = new TextInputBuilder()
+        .setCustomId('links')
+        .setLabel('Rules & Logo Links (optional)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Rules: http://example.com/rules\nLogo: http://example.com/logo.png')
+        .setRequired(false);
 
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(bestOfInput),
-            new ActionRowBuilder().addComponents(playersPerTeamInput),
-            new ActionRowBuilder().addComponents(linksInput)
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(bestOfInput),
+        new ActionRowBuilder().addComponents(playersPerTeamInput),
+        new ActionRowBuilder().addComponents(linksInput)
+    );
+
+    await interaction.showModal(modal);
+},
+
+async handleAdvancedOptions(interaction) {
+    const tournament = tournaments.get(interaction.guildId);
+    if (!tournament) {
+        await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+        return;
+    }
+
+    tournament.bestOf = parseInt(interaction.fields.getTextInputValue('best_of'));
+    tournament.playersPerTeam = parseInt(interaction.fields.getTextInputValue('players_per_team'));
+    tournament.links = interaction.fields.getTextInputValue('links');
+
+    const modeSelect = new StringSelectMenuBuilder()
+        .setCustomId('tournament_mode_select')
+        .setPlaceholder('Select tournament mode')
+        .addOptions(
+            TOURNAMENT_MODES.map(mode => 
+                new StringSelectMenuOptionBuilder()
+                    .setLabel(mode)
+                    .setValue(mode)
+            )
         );
 
-        await interaction.showModal(modal);
-    },
+    const modeRow = new ActionRowBuilder().addComponents(modeSelect);
 
-    async handleAdvancedOptions(interaction) {
-        const tournament = tournaments.get(interaction.guildId);
-        if (!tournament) {
-            await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
-            return;
-        }
+    const eligibleRoles = interaction.guild.roles.cache
+        .filter(role => role.name !== '@everyone' && !role.managed)
+        .map(role => ({
+            label: role.name,
+            value: role.id
+        }));
 
-        tournament.bestOf = parseInt(interaction.fields.getTextInputValue('best_of'));
-        tournament.playersPerTeam = parseInt(interaction.fields.getTextInputValue('players_per_team'));
-        tournament.links = interaction.fields.getTextInputValue('links');
+    let components = [modeRow];
+    let content = 'Advanced options set. Please select the tournament mode:';
 
-        const modeSelect = new StringSelectMenuBuilder()
-            .setCustomId('tournament_mode_select')
-            .setPlaceholder('Select tournament mode')
-            .addOptions(
-                TOURNAMENT_MODES.map(mode => 
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(mode)
-                        .setValue(mode)
-                )
-            );
-
+    if (eligibleRoles.length >= 5) {
         const roleSelect = new StringSelectMenuBuilder()
             .setCustomId('tournament_role_select')
             .setPlaceholder('Select restricted roles (optional)')
             .setMinValues(0)
-            .setMaxValues(interaction.guild.roles.cache.size)
-            .addOptions(
-                interaction.guild.roles.cache
-                    .filter(role => role.name !== '@everyone')
-                    .map(role => 
-                        new StringSelectMenuOptionBuilder()
-                            .setLabel(role.name)
-                            .setValue(role.id)
-                    )
-            );
+            .setMaxValues(Math.min(eligibleRoles.length, 25))
+            .addOptions(eligibleRoles);
 
-        const modeRow = new ActionRowBuilder().addComponents(modeSelect);
         const roleRow = new ActionRowBuilder().addComponents(roleSelect);
+        components.push(roleRow);
+        content += ' and restricted roles (if any)';
+    } else {
+        content += '\nNote: Role restriction is not available due to insufficient eligible roles.';
+    }
 
+    try {
         await interaction.reply({ 
-            content: 'Advanced options set. Please select the tournament mode and restricted roles (if any):', 
-            components: [modeRow, roleRow],
+            content: content, 
+            components: components,
             ephemeral: true
         });
-    },
-
-    async handleTournamentModeSelection(interaction) {
-        const tournament = tournaments.get(interaction.guildId);
-        if (!tournament) {
-            await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
-            return;
+    } catch (error) {
+        console.error('Error in handleAdvancedOptions:', error);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.followUp({ 
+                content: 'An error occurred while processing your request. Please try again.', 
+                ephemeral: true 
+            });
         }
+    }
+},
 
-        tournament.tournamentMode = interaction.values[0];
+async handleTournamentModeSelection(interaction) {
+    const tournament = tournaments.get(interaction.guildId);
+    if (!tournament) {
+        await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+        return;
+    }
+
+    tournament.tournamentMode = interaction.values[0];
 
         // Check if role selection has been made
         if (tournament.restrictedRoles.length > 0) {
