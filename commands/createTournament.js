@@ -146,58 +146,76 @@ async handleInteraction(interaction) {
     },
 
     async handleTournamentCreation(interaction) {
+    try {
         const title = interaction.fields.getTextInputValue('title');
         const description = interaction.fields.getTextInputValue('description');
         const date = interaction.fields.getTextInputValue('date');
         const time = interaction.fields.getTextInputValue('time');
         const maxTeams = parseInt(interaction.fields.getTextInputValue('max_teams'));
-        const dateTime = new Date(`${date}T${time}:00`);
+
+        // Validate date and time
+        const dateTimeString = `${date}T${time}:00`;
+        const dateTime = new Date(dateTimeString);
+
+        if (isNaN(dateTime.getTime())) {
+            throw new Error('Invalid date or time format');
+        }
+
+        if (isNaN(maxTeams) || maxTeams <= 0) {
+            throw new Error('Invalid number of teams');
+        }
 
         const tournamentData = tournaments.get(interaction.guildId);
         if (!tournamentData || !tournamentData.game) {
-            await interaction.reply({ content: 'An error occurred: Game not found. Please try creating the tournament again.', ephemeral: true });
-            return;
+            throw new Error('Game not found. Please try creating the tournament again.');
         }
 
         const tournament = new Tournament(title, description, dateTime, maxTeams, tournamentData.game);
         tournaments.set(interaction.guildId, tournament);
 
-    const embed = new EmbedBuilder()
-        .setColor('#D9212C')
-        .setTitle('Tournament Created')
-        .addFields(
-            { name: 'Title', value: tournament.title },
-            { name: 'Description', value: tournament.description },
-            { name: 'Date and Time', value: `<t:${Math.floor(tournament.dateTime.getTime() / 1000)}:F>` },
-            { name: 'Max Teams', value: tournament.maxTeams.toString() },
-            { name: 'Game', value: tournament.game.name }
-        );
+        const embed = new EmbedBuilder()
+            .setColor('#D9212C')
+            .setTitle('Tournament Created')
+            .addFields(
+                { name: 'Title', value: tournament.title },
+                { name: 'Description', value: tournament.description },
+                { name: 'Date and Time', value: `<t:${Math.floor(tournament.dateTime.getTime() / 1000)}:F>` },
+                { name: 'Max Teams', value: tournament.maxTeams.toString() },
+                { name: 'Game', value: tournament.game.name }
+            );
 
-    const finalizeButton = new ButtonBuilder()
-        .setCustomId(`create_tournament_finalize_${tournament.id}`)
-        .setLabel('Finalize Tournament')
-        .setStyle(ButtonStyle.Success);
+        const finalizeButton = new ButtonBuilder()
+            .setCustomId(`create_tournament_finalize_${tournament.id}`)
+            .setLabel('Finalize Tournament')
+            .setStyle(ButtonStyle.Success);
 
-    const advancedButton = new ButtonBuilder()
-        .setCustomId('create_tournament_advanced')
-        .setLabel('Advanced Options')
-        .setStyle(ButtonStyle.Primary);
+        const advancedButton = new ButtonBuilder()
+            .setCustomId('create_tournament_advanced')
+            .setLabel('Advanced Options')
+            .setStyle(ButtonStyle.Primary);
 
-    const modifyButton = new ButtonBuilder()
-        .setCustomId('create_tournament_modify')
-        .setLabel('Modify Basic Settings')
-        .setStyle(ButtonStyle.Secondary);
+        const modifyButton = new ButtonBuilder()
+            .setCustomId('create_tournament_modify')
+            .setLabel('Modify Basic Settings')
+            .setStyle(ButtonStyle.Secondary);
 
-    const row = new ActionRowBuilder()
-        .addComponents(finalizeButton, advancedButton, modifyButton);
+        const row = new ActionRowBuilder()
+            .addComponents(finalizeButton, advancedButton, modifyButton);
 
-    await interaction.reply({ 
-        content: 'Tournament created successfully! You can finalize the tournament, set advanced options, or modify basic settings.', 
-        embeds: [embed], 
-        components: [row],
-        ephemeral: true
-    });
-},
+        await interaction.reply({ 
+            content: 'Tournament created successfully! You can finalize the tournament, set advanced options, or modify basic settings.', 
+            embeds: [embed], 
+            components: [row],
+            ephemeral: true
+        });
+    } catch (error) {
+        console.error('Error in handleTournamentCreation:', error);
+        await interaction.reply({ 
+            content: `An error occurred while creating the tournament: ${error.message}`, 
+            ephemeral: true 
+        });
+    }
+}
 
 async showAdvancedOptions(interaction) {
     const modal = new ModalBuilder()
