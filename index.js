@@ -66,14 +66,11 @@ client.on('interactionCreate', async interaction => {
                         await interaction.reply({ content: 'Only administrators can start the tournament.', ephemeral: true });
                     }
                     break;
-                case 'create':
+                default:
                     const createTournamentCommand = client.commands.get('create_tournament');
                     if (createTournamentCommand && typeof createTournamentCommand.handleInteraction === 'function') {
                         await createTournamentCommand.handleInteraction(interaction);
                     }
-                    break;
-                default:
-                    console.log(`Unhandled button interaction: ${interaction.customId}`);
                     break;
             }
         } else if (interaction.isModalSubmit()) {
@@ -82,10 +79,19 @@ client.on('interactionCreate', async interaction => {
                 if (signupCommand && typeof signupCommand.handleSignupSubmit === 'function') {
                     await signupCommand.handleSignupSubmit(interaction);
                 }
-            } else if (interaction.customId === 'create_tournament_details_modal') {
+            } else {
                 const createTournamentCommand = client.commands.get('create_tournament');
                 if (createTournamentCommand && typeof createTournamentCommand.handleInteraction === 'function') {
                     await createTournamentCommand.handleInteraction(interaction);
+                }
+            }
+        } else if (interaction.isStringSelectMenu()) {
+            const createTournamentCommand = client.commands.get('create_tournament');
+            if (createTournamentCommand) {
+                if (interaction.customId === 'tournament_mode_select') {
+                    await createTournamentCommand.handleTournamentModeSelection(interaction);
+                } else if (interaction.customId === 'tournament_role_select') {
+                    await createTournamentCommand.handleRoleSelection(interaction);
                 }
             }
         }
