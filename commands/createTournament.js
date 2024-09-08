@@ -245,6 +245,63 @@ async handleTournamentCreation(interaction) {
         });
     }
 },
+    
+async showModifyBasicSettings(interaction) {
+    const tournament = tournaments.get(interaction.guildId);
+    if (!tournament) {
+        await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+        return;
+    }
+
+    const modal = new ModalBuilder()
+        .setCustomId('modify_tournament_details_modal')
+        .setTitle('Modify Tournament Details');
+
+    const titleInput = new TextInputBuilder()
+        .setCustomId('title')
+        .setLabel('Tournament title')
+        .setStyle(TextInputStyle.Short)
+        .setValue(tournament.title)
+        .setRequired(true);
+
+    const descriptionInput = new TextInputBuilder()
+        .setCustomId('description')
+        .setLabel('Tournament description')
+        .setStyle(TextInputStyle.Paragraph)
+        .setValue(tournament.description)
+        .setRequired(true);
+
+    const dateInput = new TextInputBuilder()
+        .setCustomId('date')
+        .setLabel('Date (YYYY-MM-DD)')
+        .setStyle(TextInputStyle.Short)
+        .setValue(tournament.dateTime.toISOString().split('T')[0])
+        .setRequired(true);
+
+    const timeInput = new TextInputBuilder()
+        .setCustomId('time')
+        .setLabel('Time (HH:MM)')
+        .setStyle(TextInputStyle.Short)
+        .setValue(tournament.dateTime.toTimeString().split(' ')[0].slice(0, 5))
+        .setRequired(true);
+
+    const maxTeamsInput = new TextInputBuilder()
+        .setCustomId('max_teams')
+        .setLabel('Maximum number of teams')
+        .setStyle(TextInputStyle.Short)
+        .setValue(tournament.maxTeams.toString())
+        .setRequired(true);
+
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(titleInput),
+        new ActionRowBuilder().addComponents(descriptionInput),
+        new ActionRowBuilder().addComponents(dateInput),
+        new ActionRowBuilder().addComponents(timeInput),
+        new ActionRowBuilder().addComponents(maxTeamsInput)
+    );
+
+    await interaction.showModal(modal);
+},
 
 async showAdvancedOptions(interaction) {
     const modal = new ModalBuilder()
@@ -370,7 +427,7 @@ async handleAdvancedOptions(interaction) {
 async handleTournamentModeSelection(interaction) {
     const tournament = tournaments.get(interaction.guildId);
     if (!tournament) {
-        await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+        await interaction.update({ content: 'No active tournament found.', components: [], ephemeral: true });
         return;
     }
 
@@ -380,14 +437,14 @@ async handleTournamentModeSelection(interaction) {
     if (tournament.restrictedRoles) {
         await this.enableConfirmButton(interaction);
     } else {
-        await interaction.update({ content: 'Tournament mode set. Please select restricted roles (if any).' });
+        await interaction.update({ content: 'Tournament mode set. Please select restricted roles (if any).', components: interaction.message.components });
     }
 },
 
 async handleRoleSelection(interaction) {
     const tournament = tournaments.get(interaction.guildId);
     if (!tournament) {
-        await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
+        await interaction.update({ content: 'No active tournament found.', components: [], ephemeral: true });
         return;
     }
 
@@ -397,10 +454,10 @@ async handleRoleSelection(interaction) {
     if (tournament.tournamentMode) {
         await this.enableConfirmButton(interaction);
     } else {
-        await interaction.update({ content: 'Roles set. Please select the tournament mode.' });
+        await interaction.update({ content: 'Roles set. Please select the tournament mode.', components: interaction.message.components });
     }
 },
-    
+
 async enableConfirmButton(interaction) {
     const components = interaction.message.components;
     const confirmRow = components.find(row => row.components[0].customId === 'create_tournament_confirm_advanced');
