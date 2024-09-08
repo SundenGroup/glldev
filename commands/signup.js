@@ -62,7 +62,7 @@ module.exports = {
 
         modal.addComponents(new ActionRowBuilder().addComponents(teamNameInput));
 
-        const teamSize = tournament.game.teamSize || 1;
+        const teamSize = tournament.playersPerTeam || tournament.game.teamSize || 1;
         console.log('Team size:', teamSize);
 
         const playerInputs = Math.min(teamSize, 5);
@@ -100,7 +100,7 @@ module.exports = {
 
         const teamName = interaction.fields.getTextInputValue('team_name');
         const players = [];
-        const teamSize = Math.min(tournament.game.teamSize || 1, 5);
+        const teamSize = Math.min(tournament.playersPerTeam || tournament.game.teamSize || 1, 5);
         for (let i = 1; i <= teamSize; i++) {
             players.push(interaction.fields.getTextInputValue(`player_${i}`));
         }
@@ -133,7 +133,6 @@ module.exports = {
 
         if (geoGuessrProfile) {
             embed.addFields({ name: 'GeoGuessr Profile', value: geoGuessrProfile });
-            embed.addFields({ name: 'GeoGuessr Rating', value: 'Rating will be fetched' });
         }
 
         await interaction.reply({ embeds: [embed], ephemeral: true });
@@ -146,8 +145,8 @@ module.exports = {
             if (lastMessage) {
                 const updatedEmbed = EmbedBuilder.from(lastMessage.embeds[0])
                     .setFields(
-                        ...lastMessage.embeds[0].fields.filter(field => field.name !== 'Signed Up' && field.name !== 'All Participants'),
-                        { name: 'Signed Up', value: `${tournament.participants.length}/${tournament.maxTeams}` },
+                        ...lastMessage.embeds[0].fields.filter(field => field.name !== 'Participants' && field.name !== 'All Participants'),
+                        { name: 'Participants', value: `${tournament.participants.length}/${tournament.maxTeams}`, inline: true },
                         { name: 'All Participants', value: participantsList }
                     );
                 await lastMessage.edit({ embeds: [updatedEmbed] });

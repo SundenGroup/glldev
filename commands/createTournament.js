@@ -367,42 +367,34 @@ module.exports = {
             const discordTimestamp = `<t:${Math.floor(tournament.dateTime.getTime() / 1000)}:F>`;
             const relativeTime = `<t:${Math.floor(tournament.dateTime.getTime() / 1000)}:R>`;
 
-            const announceEmbed = new EmbedBuilder()
-                .setColor('#D9212C')
-                .setTitle(tournament.title)
-                .setDescription(`${tournament.description}\n\n**Date & Time:**\n${discordTimestamp} (${relativeTime})`)
-                .addFields(
-                    { name: 'Bracket', value: 'Single Elimination', inline: true },
-                { name: 'Matches', value: 'Best of 1', inline: true },
-                { name: 'Team Size', value: tournament.game.teamSize.toString(), inline: true },
-                { name: 'Participants', value: `0/${tournament.maxTeams}`, inline: true },
-                { name: '\u200B', value: '\u200B', inline: true },  // Empty field for alignment
-                { name: '\u200B', value: '\u200B', inline: true }   // Empty field for alignment
-            )
+    const announceEmbed = new EmbedBuilder()
+        .setColor('#D9212C')
+        .setTitle(tournament.title)
+        .setDescription(`${tournament.description}\n\n**Date & Time:**\n${discordTimestamp} (${relativeTime})`)
         .addFields(
-                { name: 'Tournament Mode', value: tournament.tournamentMode, inline: true },
-                { name: 'Best of', value: tournament.bestOf.toString(), inline: true },
-                { name: 'Players per Team', value: tournament.playersPerTeam.toString(), inline: true }
-            );
+            { name: 'Tournament Mode', value: tournament.tournamentMode, inline: true },
+            { name: 'Best of', value: tournament.bestOf.toString(), inline: true },
+            { name: 'Team Size', value: tournament.playersPerTeam.toString(), inline: true },
+            { name: 'Participants', value: `0/${tournament.maxTeams}`, inline: true }
+        )
+        .setThumbnail(`https://cdn.discordapp.com/emojis/${tournament.game.emojiId}.png`);
 
-        if (tournament.links) {
-            const rulesMatch = tournament.links.match(/Rules:\s*(http[s]?:\/\/\S+)/i);
-            const logoMatch = tournament.links.match(/Logo:\s*(http[s]?:\/\/\S+)/i);
+    if (tournament.links) {
+        const rulesMatch = tournament.links.match(/Rules:\s*(http[s]?:\/\/\S+)/i);
+        const logoMatch = tournament.links.match(/Logo:\s*(http[s]?:\/\/\S+)/i);
 
-            if (rulesMatch) {
-                announceEmbed.addFields({ name: 'Rules', value: `[View Rules](${rulesMatch[1]})`, inline: true });
-            }
-            if (logoMatch) {
-                announceEmbed.setImage(logoMatch[1]);
-            }
+        if (rulesMatch) {
+            announceEmbed.addFields({ name: 'Rules', value: `[View Rules](${rulesMatch[1]})`, inline: true });
         }
-
-        if (tournament.restrictedRoles.length > 0) {
-            const roleNames = tournament.restrictedRoles.map(roleId => interaction.guild.roles.cache.get(roleId).name).join(', ');
-            announceEmbed.addFields({ name: 'Restricted to Roles', value: roleNames, inline: false });
+        if (logoMatch) {
+            announceEmbed.setImage(logoMatch[1]);
         }
-        
-            //.setThumbnail(`https://cdn.discordapp.com/emojis/${tournament.game.emojiId}.png`);//
+    }
+
+    if (tournament.restrictedRoles.length > 0) {
+        const roleNames = tournament.restrictedRoles.map(roleId => interaction.guild.roles.cache.get(roleId).name).join(', ');
+        announceEmbed.addFields({ name: 'Restricted to Roles', value: roleNames, inline: false });
+    }
 
         await announcementChannel.send({ 
             embeds: [announceEmbed], 
