@@ -215,7 +215,7 @@ async handleInteraction(interaction) {
             ephemeral: true 
         });
     }
-}
+},
 
 async showAdvancedOptions(interaction) {
     const modal = new ModalBuilder()
