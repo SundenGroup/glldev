@@ -455,26 +455,46 @@ async handleRoleSelection(interaction) {
             tournament.restrictedRoles.push(roleId);
         }
 
-        // Update button styles
-        const components = interaction.message.components;
-        for (const row of components) {
-            for (const button of row.components) {
-                if (button.customId.startsWith('role_')) {
-                    const buttonRoleId = button.customId.split('_')[1];
-                    button.setStyle(tournament.restrictedRoles.includes(buttonRoleId) ? ButtonStyle.Primary : ButtonStyle.Secondary);
-                }
-            }
+        // Recreate the buttons with updated styles
+        const eligibleRoles = interaction.guild.roles.cache
+            .filter(role => role.name !== '@everyone' && !role.managed)
+            .first(24);
+
+        const roleButtons = eligibleRoles.map(role => 
+            new ButtonBuilder()
+                .setCustomId(`role_${role.id}`)
+                .setLabel(role.name)
+                .setStyle(tournament.restrictedRoles.includes(role.id) ? ButtonStyle.Primary : ButtonStyle.Secondary)
+        );
+
+        const roleRows = [];
+        for (let i = 0; i < roleButtons.length; i += 5) {
+            roleRows.push(new ActionRowBuilder().addComponents(roleButtons.slice(i, i + 5)));
+        }
+
+        const confirmButton = new ButtonBuilder()
+            .setCustomId('create_tournament_confirm_advanced')
+            .setLabel('Confirm Settings')
+            .setStyle(ButtonStyle.Success);
+
+        if (roleRows[roleRows.length - 1].components.length < 5) {
+            roleRows[roleRows.length - 1].addComponents(confirmButton);
+        } else {
+            roleRows.push(new ActionRowBuilder().addComponents(confirmButton));
         }
 
         const selectedRoles = tournament.restrictedRoles.map(id => interaction.guild.roles.cache.get(id)?.name || 'Unknown Role').join(', ');
 
         await interaction.update({
             content: `Tournament mode: ${tournament.tournamentMode}\nSelected roles: ${selectedRoles || 'None'}`,
-            components: components
+            components: roleRows
         });
     } catch (error) {
         console.error('Error in handleRoleSelection:', error);
-        await interaction.reply({ content: 'An error occurred while selecting roles. Please try again.', ephemeral: true });
+        // Don't try to respond if the interaction has already been handled
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: 'An error occurred while selecting roles. Please try again.', ephemeral: true }).catch(console.error);
+        }
     }
 },
 
