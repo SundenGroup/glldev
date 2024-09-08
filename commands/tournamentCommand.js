@@ -1,5 +1,5 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { handleInteraction } = require('./tournamentHandlers');
+const { SlashCommandBuilder, ButtonBuilder, ActionRowBuilder } = require('discord.js');
+const { handleInteraction, handleGameSelection } = require('./tournamentHandlers');
 const { tournaments } = require('./tournamentState');
 const { GAME_PRESETS } = require('./tournamentUtils');
 

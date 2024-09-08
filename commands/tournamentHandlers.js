@@ -1,3 +1,53 @@
+const { ButtonBuilder, ActionRowBuilder, ModalBuilder, EmbedBuilder, TextInputBuilder, TextInputStyle, ButtonStyle } = require('discord.js');
+const { tournaments, Tournament } = require('./tournamentState');
+const { GAME_PRESETS, TOURNAMENT_MODES, createTournamentEmbed } = require('./tournamentUtils');
+
+async function handleInteraction(interaction) {
+    try {
+        if (interaction.isButton()) {
+            if (interaction.customId.startsWith('create_tournament_game_')) {
+                await handleGameSelection(interaction);
+                return;
+            } else if (interaction.customId.startsWith('create_tournament_finalize_')) {
+                await finalizeTournament(interaction);
+                return;
+            } else if (interaction.customId === 'create_tournament_advanced') {
+                await showAdvancedOptions(interaction);
+                return;
+            } else if (interaction.customId === 'create_tournament_modify') {
+                await showModifyBasicSettings(interaction);
+                return;
+            } else if (interaction.customId === 'create_tournament_confirm_advanced') {
+                await handleConfirmAdvanced(interaction);
+                return;
+            } else if (interaction.customId.startsWith('mode_')) {
+                await handleTournamentModeSelection(interaction);
+                return;
+            } else if (interaction.customId.startsWith('role_')) {
+                await handleRoleSelection(interaction);
+                return;
+            }
+        } else if (interaction.isModalSubmit()) {
+            if (interaction.customId === 'create_tournament_details_modal') {
+                await handleTournamentCreation(interaction);
+                return;
+            } else if (interaction.customId === 'create_tournament_advanced_modal') {
+                await handleAdvancedOptions(interaction);
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Error in create_tournament handleInteraction:', error);
+        if (!interaction.replied && !interaction.deferred) {
+            try {
+                await interaction.reply({ content: 'An error occurred while processing your request. Please try again.', ephemeral: true });
+            } catch (replyError) {
+                console.error('Error while attempting to reply to interaction:', replyError);
+            }
+        }
+    }
+},
+
 async handleGameSelection(interaction) {
     try {
         const gameKey = interaction.customId.split('_')[3];
