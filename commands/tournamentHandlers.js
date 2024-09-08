@@ -48,7 +48,7 @@ async function handleInteraction(interaction) {
     }
 }
 
-async handleGameSelection(interaction) {
+async function handleGameSelection(interaction) {
     try {
         const gameKey = interaction.customId.split('_')[3];
         const game = GAME_PRESETS[gameKey];
@@ -108,7 +108,7 @@ async handleGameSelection(interaction) {
     }
 }
 
-async handleTournamentCreation(interaction) {
+async function handleTournamentCreation(interaction) {
     try {
         const title = interaction.fields.getTextInputValue('title');
         const description = interaction.fields.getTextInputValue('description');
@@ -185,7 +185,7 @@ async handleTournamentCreation(interaction) {
     }
 }
     
-async showModifyBasicSettings(interaction) {
+async function showModifyBasicSettings(interaction) {
     const tournament = tournaments.get(interaction.guildId);
     if (!tournament) {
         await interaction.reply({ content: 'No active tournament found.', ephemeral: true });
@@ -242,7 +242,7 @@ async showModifyBasicSettings(interaction) {
     await interaction.showModal(modal);
 }
 
-async showAdvancedOptions(interaction) {
+async function showAdvancedOptions(interaction) {
     const modal = new ModalBuilder()
         .setCustomId('create_tournament_advanced_modal')
         .setTitle('Advanced Tournament Options');
@@ -283,7 +283,7 @@ async showAdvancedOptions(interaction) {
     await interaction.showModal(modal);
 }
 
-async handleAdvancedOptions(interaction) {
+async function handleAdvancedOptions(interaction) {
     try {
         const tournament = tournaments.get(interaction.guildId);
         if (!tournament) {
@@ -328,7 +328,7 @@ async handleAdvancedOptions(interaction) {
     }
 }
 
-async handleTournamentModeSelection(interaction) {
+async function handleTournamentModeSelection(interaction) {
     const tournament = tournaments.get(interaction.guildId);
     if (!tournament) {
         await interaction.update({ content: 'No active tournament found.', components: [], ephemeral: true });
@@ -375,7 +375,7 @@ async handleTournamentModeSelection(interaction) {
     });
 }
 
-async handleRoleSelection(interaction) {
+async function handleRoleSelection(interaction) {
     try {
         const tournament = tournaments.get(interaction.guildId);
         if (!tournament) {
@@ -439,7 +439,7 @@ async handleRoleSelection(interaction) {
     }
 }
 
-async handleConfirmAdvanced(interaction) {
+async function handleConfirmAdvanced(interaction) {
     const tournament = tournaments.get(interaction.guildId);
     if (!tournament) {
         await interaction.update({ content: 'No active tournament found.', components: [], ephemeral: true });
@@ -479,7 +479,7 @@ async handleConfirmAdvanced(interaction) {
     });
 }
 
-async showFinalizationOption(interaction) {
+async function showFinalizationOption(interaction) {
         const tournament = tournaments.get(interaction.guildId);
 
         const finalizeButton = new ButtonBuilder()
@@ -496,7 +496,7 @@ async showFinalizationOption(interaction) {
         });
     }
 
-async finalizeTournament(interaction) {
+async function finalizeTournament(interaction) {
         console.log('Finalizing tournament');
         try {
             const tournamentId = interaction.customId.split('_')[3];
